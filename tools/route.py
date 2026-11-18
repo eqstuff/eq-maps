@@ -240,6 +240,15 @@ def label_points():
         if lv is None or lv not in FLOORS: continue
         out.append(dict(text=e['name'],kind=e['kind'],lv=lv,room=nearest_room(x,y,lv)))
     return out
+def walk_between(a,b):
+    """(distance, legs) of the shortest walk between two nodes on one floor through the floor graph, or None."""
+    try: p=nx.shortest_path(G,a,b,weight='weight')
+    except (nx.NetworkXNoPath,nx.NodeNotFound): return None
+    d=0;legs=[]
+    for u,v in zip(p[:-1],p[1:]):
+        if (u,v) not in within or nodes[u][0]!=nodes[v][0]: return None
+        d+=within[(u,v)][0]; legs=merge_legs(legs,within[(u,v)][1])
+    return (d,legs)
 def merge_legs(a,b):
     out=[list(x) for x in a]
     for h,l in b:

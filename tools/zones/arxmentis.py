@@ -220,3 +220,7 @@ ROUTES_LIMITS_NOTE = ("Directions are straight-line compass headings between the
                       "walls aren’t considered, so follow the corridors toward that heading. The Anetarx (+80) and Penutarx (+172) floors are divided by hand into rooms and corridor pieces (a corridor or T-junction can be picked as a start or destination), and their routes follow those corridors. The pit and the teleport cross "
                       "connect to the tower only through the teleport link T1 (central hub), which comes from in-game "
                       "experience, not from the map, and is assumed to work both ways. The +470 sky platform isn’t included.")
+
+# Order of the room boxes inside a divided floor in the connections diagram (top to bottom).
+UNIT_ORDER = {80: ["Anetarx Armory", "Anetarx Central Study", "Anetarx Extraction Lab"],
+              172: ["Penutarx Reanimation Ward", "Penutarx Stasis Lab", "Penutarx Junction"]}

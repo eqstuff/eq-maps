@@ -114,7 +114,8 @@ Where a floor holds several rooms joined by corridors (Arx Mentis +80 Anetarx an
 * `CORRIDORS` lists corridor pieces as extra "places" (kind `corridor`) with an anchor on the corridor's centre line. A T-junction is its own piece, so a route can say which way to leave it and the third branch isn't swallowed by the corridor between the other two.
 * `FLOOR_GRAPHS[level]["edges"]` joins neighbours: `(A, B, [via points])`. The walk goes from A's anchor through the via points (doors, corners) to B's anchor, and the compass legs come from that polyline. Ramp ends attach to the nearest piece, or per `attach` when the nearest isn't the right one.
 * Consecutive hops are merged into one step ("Head E 30 → S 20 … to the Armory, via Study NE corridor, East corridor …").
-* Corridors are selectable as start/destination and searchable (kind "corridor"), numbered on the floor plan, and left out of the diagram chips and the cheat-sheet matrix to keep them readable.
+* Corridors are internal routing only: not selectable, searchable or numbered, and absent from the cheat sheet. They appear only as "via" names inside a route's steps.
+* In the "What connects to what" diagram a divided floor is drawn as one box per room (`UNIT_ORDER` in the zone config sets their order); undivided floors stay one box. Floor cards list only rooms and links.
 * Points that sit inside a room (Keeper of the Matrix, Analysis Room, Medical Chamber, Third Generator) are searchable points that resolve to the room, not rooms.
 
 The division is a reading of the outlines made with zoomed plots (`/tmp`-style scripts that draw one floor's lines with the label points, ramp ends and a 10-unit grid). Check it the same way after changing it. Other floors still use plain straight lines; to divide one, add its corridors and a `FLOOR_GRAPHS` entry.

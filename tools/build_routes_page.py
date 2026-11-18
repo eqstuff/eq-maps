@@ -5,11 +5,11 @@ sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
 from config import Z,OUT_DIR
 import route as R
 E=html.escape
-ROOMS=R.ROOMS; ids=[r['id'] for r in ROOMS]
+ROOMS=R.ROOMS; ids=[r['id'] for r in ROOMS if r.get('kind')=='room']   # corridor pieces only matter inside routes
 ORDER=sorted(ids,key=lambda i:(-ROOMS[i]['lv'] if False else 0))
 # order rooms top floor to bottom, then name
 order_all=sorted(ids,key=lambda i:(-ROOMS[i]['lv'],ROOMS[i]['name']))
-order=[i for i in order_all if ROOMS[i].get('kind')=='room']   # matrix and sheets: rooms only
+order=order_all
 def waycmd(x,y,z):
     """A copyable /way command; /way takes the same order as /loc prints: Y, X, Z."""
     return f'<code class="way" title="Click to copy, then paste in the chat window to set a waypoint">/way {round(-y)}, {round(-x)}, {round(z)}</code>'
