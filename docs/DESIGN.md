@@ -89,3 +89,9 @@ For the interactive guide, endpoints can be a whole *floor* instead of a room: a
 * Teleports, zone lines and the unconnected sky platform aren't modelled.
 * Compass/`/loc` orientation is derived, not verified in the client.
 * Stair lengths use a Manhattan estimate; distances are ranking aids, not exact.
+
+## Type-ahead pickers and NPC search
+
+The From/To `<select>`s stay in the page as hidden state holders; `tools/combobox.js` (+ `combobox.css`) layers a type-ahead input on top of each. Entries are floors, rooms, and every non-room point label (NPCs, hunters, ground spawns). Typing filters by accent-insensitive substring over all words; start-of-word matches rank first. Choosing an entry sets the select's value and fires `change`, so the existing render logic is unchanged.
+
+An NPC entry resolves to the room it stands in: `route.label_points()` takes each label's (x, y, floor) and `route.nearest_room()` picks the room with the least *walking* distance on that floor (straight-line fallback). If a floor has no named rooms the entry selects the whole floor. The page shows a note ("X is in Y") above the route. These labels are only as accurate as Brewall's map placement, and mobs that wander or respawn elsewhere will be wrong.

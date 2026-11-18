@@ -23,6 +23,15 @@ ul.sheet{list-style:none;margin:8px 0 4px;padding:0;columns:2 340px}ul.sheet li{
 .lk{border:0;background:none;padding:0;text-align:left;color:var(--fg)}.lk:hover{color:var(--acc)}
 table.key{border-collapse:collapse;width:100%;background:var(--card);border:1px solid var(--line)}table.key th,table.key td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:left;font-size:13px;vertical-align:top}table.key th{font-size:11.5px;text-transform:uppercase;color:var(--mut)}
 .legend span{display:inline-block;padding:1px 8px;border-radius:5px;margin-right:6px;font-size:12px}
+.cb{position:relative}
+.cbi{width:100%;font:inherit;font-size:16px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg)}
+.cbi:focus{outline:2px solid var(--acc);outline-offset:-1px}
+.cbl{position:absolute;z-index:50;left:0;right:0;top:calc(100% + 4px);max-height:340px;overflow:auto;margin:0;padding:4px;list-style:none;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.cbl li{display:flex;gap:8px;align-items:baseline;padding:6px 8px;border-radius:6px;cursor:pointer;color:var(--fg)}
+.cbl li.hi{background:color-mix(in srgb,var(--acc) 16%,transparent)}
+.cbl .t{font-weight:600}.cbl .s{color:var(--mut);font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cbl .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);border:1px solid var(--line);border-radius:9px;padding:0 6px;white-space:nowrap}
+.cbl .none{color:var(--mut);padding:8px;cursor:default}
 </style></head><body><div class="wrap">
 <h1>Arx Mentis: room-to-room routes</h1>
 <p class="lead">How to walk from any named room to any other, with the compass direction to head when you leave each room. Built from Brewall’s map; stair numbers (S1–S23) match the floors-and-connections page.</p>
@@ -52,4 +61,93 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-k]');if(!
 f.value=6;t.value=14;show();
 document.addEventListener('click',e=>{const w=e.target.closest('.way');if(!w)return;e.stopPropagation();const t=w.textContent.trim();
  try{navigator.clipboard.writeText(t).then(()=>{const o=w.title;w.title='Copied!';w.classList.add('copied');setTimeout(()=>{w.title=o;w.classList.remove('copied')},1200)},()=>{})}catch(_){}},true);
+
+const ENT=[{"text": "Anetarx Extraction Lab (+172)", "sub": "+172", "kind": "room", "code": "6"}, {"text": "Crasis Whesar", "sub": "+172", "kind": "room", "code": "18"}, {"text": "Pentuarx Junction", "sub": "+172", "kind": "room", "code": "2"}, {"text": "Penutarx Reanimation Ward", "sub": "+172", "kind": "room", "code": "7"}, {"text": "Penutarx Statis Lab", "sub": "+172", "kind": "room", "code": "8"}, {"text": "Anetarx Magicae Sanctuary", "sub": "+115", "kind": "room", "code": "11"}, {"text": "Anetarx Armory", "sub": "+80", "kind": "room", "code": "10"}, {"text": "Anetarx Central Study", "sub": "+80", "kind": "room", "code": "4"}, {"text": "Anetarx Extraction Lab (+80)", "sub": "+80", "kind": "room", "code": "5"}, {"text": "Keeper of the Matrix", "sub": "+80", "kind": "room", "code": "17"}, {"text": "Observation Deck", "sub": "+80", "kind": "room", "code": "15"}, {"text": "The Unseen", "sub": "+80", "kind": "room", "code": "16"}, {"text": "Protarx Relic Keep", "sub": "+24", "kind": "room", "code": "9"}, {"text": "Central hub (ground)", "sub": "-1", "kind": "room", "code": "19"}, {"text": "Protarx Infusion Lab", "sub": "-1", "kind": "room", "code": "3"}, {"text": "Protarx Gardens", "sub": "-36", "kind": "room", "code": "12"}, {"text": "Protarx Library / Study", "sub": "-36", "kind": "room", "code": "13"}, {"text": "Principal Vicarum Nomia Room", "sub": "-71", "kind": "room", "code": "1"}, {"text": "Teritarx Preservation Chamber", "sub": "-71", "kind": "room", "code": "14"}, {"text": "Teleport", "sub": "-429", "kind": "room", "code": "0"}, {"text": "Pit (merchants / Firiona Vie)", "sub": "-484", "kind": "room", "code": "20"}, {"text": "a noctis viratum (Quests)", "sub": "in Pit (merchants / Firiona Vie)", "kind": "NPC", "code": "20", "note": "<b>a noctis viratum (Quests)</b> is in <b>Pit (merchants / Firiona Vie)</b>."}, {"text": "Serphus Arlis (Quests)", "sub": "in Central hub (ground)", "kind": "NPC", "code": "19", "note": "<b>Serphus Arlis (Quests)</b> is in <b>Central hub (ground)</b>."}, {"text": "Firiona Vie (Quests)", "sub": "in Pit (merchants / Firiona Vie)", "kind": "NPC", "code": "20", "note": "<b>Firiona Vie (Quests)</b> is in <b>Pit (merchants / Firiona Vie)</b>."}, {"text": "Bonemaw (Hunter)", "sub": "in Anetarx Magicae Sanctuary", "kind": "hunter", "code": "11", "note": "<b>Bonemaw (Hunter)</b> is in <b>Anetarx Magicae Sanctuary</b>."}, {"text": "Caldarius (Hunter)", "sub": "in The Unseen", "kind": "hunter", "code": "16", "note": "<b>Caldarius (Hunter)</b> is in <b>The Unseen</b>."}, {"text": "Mayor Praetor Livio (Hunter)", "sub": "in Pentuarx Junction", "kind": "hunter", "code": "2", "note": "<b>Mayor Praetor Livio (Hunter)</b> is in <b>Pentuarx Junction</b>."}, {"text": "Mother Virgia (Hunter)", "sub": "in Anetarx Magicae Sanctuary", "kind": "hunter", "code": "11", "note": "<b>Mother Virgia (Hunter)</b> is in <b>Anetarx Magicae Sanctuary</b>."}, {"text": "Principal Indagator Gordianus (Hunter)", "sub": "in Protarx Infusion Lab", "kind": "hunter", "code": "3", "note": "<b>Principal Indagator Gordianus (Hunter)</b> is in <b>Protarx Infusion Lab</b>."}, {"text": "Principal Indagatrix Lucia (Hunter)", "sub": "in Penutarx Statis Lab", "kind": "hunter", "code": "8", "note": "<b>Principal Indagatrix Lucia (Hunter)</b> is in <b>Penutarx Statis Lab</b>."}, {"text": "Principal Quastori Numicia (Hunter)", "sub": "in Pit (merchants / Firiona Vie)", "kind": "hunter", "code": "20", "note": "<b>Principal Quastori Numicia (Hunter)</b> is in <b>Pit (merchants / Firiona Vie)</b>."}, {"text": "Principal Vicarum Nonia (Hunter)", "sub": "in Penutarx Reanimation Ward", "kind": "hunter", "code": "7", "note": "<b>Principal Vicarum Nonia (Hunter)</b> is in <b>Penutarx Reanimation Ward</b>."}, {"text": "The Codex Libre (Hunter)", "sub": "in Keeper of the Matrix", "kind": "hunter", "code": "17", "note": "<b>The Codex Libre (Hunter)</b> is in <b>Keeper of the Matrix</b>."}, {"text": "Praetor Loricus the Hollow (Hunter)", "sub": "in Anetarx Armory", "kind": "hunter", "code": "10", "note": "<b>Praetor Loricus the Hollow (Hunter)</b> is in <b>Anetarx Armory</b>."}, {"text": "Portal Key Attuner", "sub": "in Pentuarx Junction", "kind": "ground spawn", "code": "2", "note": "<b>Portal Key Attuner</b> is in <b>Pentuarx Junction</b>."}, {"text": "Mangled Wedding Band", "sub": "in Teritarx Preservation Chamber", "kind": "ground spawn", "code": "14", "note": "<b>Mangled Wedding Band</b> is in <b>Teritarx Preservation Chamber</b>."}, {"text": "Merchant (Mercenary Gear)", "sub": "in Pit (merchants / Firiona Vie)", "kind": "NPC", "code": "20", "note": "<b>Merchant (Mercenary Gear)</b> is in <b>Pit (merchants / Firiona Vie)</b>."}, {"text": "Tuhita (Potions)", "sub": "in Pit (merchants / Firiona Vie)", "kind": "NPC", "code": "20", "note": "<b>Tuhita (Potions)</b> is in <b>Pit (merchants / Firiona Vie)</b>."}, {"text": "Pelitoi (Brooms)", "sub": "in Pit (merchants / Firiona Vie)", "kind": "NPC", "code": "20", "note": "<b>Pelitoi (Brooms)</b> is in <b>Pit (merchants / Firiona Vie)</b>."}, {"text": "Artun (Books)", "sub": "in Pit (merchants / Firiona Vie)", "kind": "NPC", "code": "20", "note": "<b>Artun (Books)</b> is in <b>Pit (merchants / Firiona Vie)</b>."}, {"text": "Leko (Armor)", "sub": "in Pit (merchants / Firiona Vie)", "kind": "NPC", "code": "20", "note": "<b>Leko (Armor)</b> is in <b>Pit (merchants / Firiona Vie)</b>."}, {"text": "Indri (Food)", "sub": "in Pit (merchants / Firiona Vie)", "kind": "NPC", "code": "20", "note": "<b>Indri (Food)</b> is in <b>Pit (merchants / Firiona Vie)</b>."}];
+/* Type-ahead picker that sits on top of a (hidden) <select>.
+   makeCombo(select, entries, {labelFor, placeholder})
+   entries: [{text, sub, kind, code, note}]  - choosing one sets select.value = code and fires 'change'.
+   Returns {sync(), picked} - call sync() after the select changes by other means. */
+function makeCombo(sel,entries,opts){
+  opts=opts||{};
+  sel.style.display='none';
+  const wrap=document.createElement('div');wrap.className='cb';
+  const inp=document.createElement('input');
+  inp.type='text';inp.className='cbi';inp.placeholder=opts.placeholder||'Type to search…';
+  inp.autocomplete='off';inp.spellcheck=false;
+  inp.setAttribute('role','combobox');inp.setAttribute('aria-autocomplete','list');inp.setAttribute('aria-expanded','false');
+  const ul=document.createElement('ul');ul.className='cbl';ul.setAttribute('role','listbox');ul.hidden=true;
+  wrap.appendChild(inp);wrap.appendChild(ul);sel.parentNode.insertBefore(wrap,sel.nextSibling);
+  const self={picked:null};
+  let shown=[],hi=-1;
+  const norm=s=>String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  const idx=entries.map(e=>({e:e,n:norm(e.text),s:norm((e.sub||'')+' '+(e.kind||''))}));
+  const KRANK={floor:0,room:1};
+  function score(it,toks){
+    let sc=0;
+    for(const t of toks){
+      const i=it.n.indexOf(t);
+      if(i<0){ if(it.s.indexOf(t)<0) return -1; sc+=1; continue; }
+      sc+= i===0?100 : (/[a-z0-9]/.test(it.n[i-1])?30:60);
+    }
+    return sc;
+  }
+  function search(q){
+    const toks=norm(q).split(/[\s,]+/).filter(Boolean);
+    if(!toks.length) return idx.filter(it=>it.e.kind==='floor'||it.e.kind==='room').map(it=>it.e);
+    const r=[];
+    idx.forEach((it,i)=>{const sc=score(it,toks);if(sc>=0)r.push({e:it.e,sc:sc,i:i})});
+    r.sort((a,b)=>b.sc-a.sc||(KRANK[a.e.kind]===undefined?2:KRANK[a.e.kind])-(KRANK[b.e.kind]===undefined?2:KRANK[b.e.kind])||a.i-b.i);
+    return r.slice(0,14).map(x=>x.e);
+  }
+  function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+  function draw(){
+    ul.innerHTML='';
+    if(!shown.length){ul.innerHTML='<li class="none">No matches</li>';return}
+    shown.forEach((e,i)=>{
+      const li=document.createElement('li');li.setAttribute('role','option');
+      li.className=i===hi?'hi':'';
+      li.innerHTML='<span class="t">'+esc(e.text)+'</span><span class="s">'+esc(e.sub||'')+'</span><span class="k">'+esc(e.kind||'')+'</span>';
+      li.addEventListener('mousedown',ev=>{ev.preventDefault();choose(e)});
+      ul.appendChild(li);
+    });
+    const cur=ul.children[hi];if(cur&&cur.scrollIntoView)cur.scrollIntoView({block:'nearest'});
+  }
+  function open(q){shown=search(q);hi=shown.length?0:-1;ul.hidden=false;inp.setAttribute('aria-expanded','true');draw()}
+  function close(){ul.hidden=true;inp.setAttribute('aria-expanded','false')}
+  function choose(e){
+    self.picked={code:e.code,text:e.text,note:e.note||''};
+    sel.value=e.code;close();
+    sel.dispatchEvent(new Event('change'));
+    self.sync();inp.blur();
+  }
+  self.sync=function(){
+    const p=self.picked;
+    const t=(p&&p.code===sel.value)?p.text:(sel.value?(opts.labelFor?opts.labelFor(sel.value):sel.value):'');
+    if(document.activeElement!==inp)inp.value=t;
+  };
+  inp.addEventListener('focus',()=>{inp.select();open('')});
+  inp.addEventListener('input',()=>open(inp.value));
+  inp.addEventListener('keydown',ev=>{
+    if(ev.key==='ArrowDown'){ev.preventDefault();if(ul.hidden)open(inp.value);else{hi=Math.min(shown.length-1,hi+1);draw()}}
+    else if(ev.key==='ArrowUp'){ev.preventDefault();hi=Math.max(0,hi-1);draw()}
+    else if(ev.key==='Enter'){ev.preventDefault();if(!ul.hidden&&shown[hi])choose(shown[hi])}
+    else if(ev.key==='Escape'){close();inp.blur()}
+  });
+  inp.addEventListener('blur',()=>{
+    close();
+    if(inp.value.trim()===''&&sel.value){self.picked=null;sel.value='';sel.dispatchEvent(new Event('change'))}
+    self.sync();
+  });
+  return self;
+}
+
+const lbl=v=>{const e=ENT.find(x=>x.kind==='room'&&x.code===v);return e?e.text:''};
+const cf=makeCombo(f,ENT,{labelFor:lbl,placeholder:'Type a room or NPC…'}),ct=makeCombo(t,ENT,{labelFor:lbl,placeholder:'Type a room or NPC…'});
+const _show=show;
+show=function(){_show();cf.sync();ct.sync();
+ const n=cb=>{const p=cb.picked;return(p&&p.code===(cb===cf?f:t).value&&p.note)?'<p class="sub">'+p.note+'</p>':''};
+ out.insertAdjacentHTML('afterbegin',n(cf)+n(ct))};
+f.onchange=t.onchange=show;
+document.getElementById('swap').onclick=()=>{const a=f.value,p=cf.picked;f.value=t.value;t.value=a;cf.picked=ct.picked;ct.picked=p;show()};
+show();
 </script></body></html>

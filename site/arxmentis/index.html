@@ -1,4 +1,14 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Arx Mentis: floors and connections</title><style>
+.cb{position:relative}
+.cbi{width:100%;font:inherit;font-size:16px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg)}
+.cbi:focus{outline:2px solid var(--acc);outline-offset:-1px}
+.cbl{position:absolute;z-index:50;left:0;right:0;top:calc(100% + 4px);max-height:340px;overflow:auto;margin:0;padding:4px;list-style:none;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.cbl li{display:flex;gap:8px;align-items:baseline;padding:6px 8px;border-radius:6px;cursor:pointer;color:var(--fg)}
+.cbl li.hi{background:color-mix(in srgb,var(--acc) 16%,transparent)}
+.cbl .t{font-weight:600}.cbl .s{color:var(--mut);font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cbl .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);border:1px solid var(--line);border-radius:9px;padding:0 6px;white-space:nowrap}
+.cbl .none{color:var(--mut);padding:8px;cursor:default}
+
 .way{font:12.5px ui-monospace,Menlo,Consolas,monospace;background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:0 5px;cursor:copy;white-space:nowrap;color:var(--fg)}.way:hover{border-color:var(--acc)}.way.copied{background:var(--acc);color:#fff}
 .wrap{max-width:1240px!important}.dgrid{grid-template-columns:minmax(0,880px) minmax(280px,1fr)!important}
 .th path{fill:none;stroke:var(--wall);stroke-width:.9;stroke-linecap:round;opacity:.85}.thb{fill:var(--bg);stroke:var(--line)}
@@ -2305,7 +2315,85 @@ function render(){
 }
 fetch('routes.json').then(r=>r.json()).then(j=>{ROUTES=j;render()}).catch(()=>{loadErr=true;render()});
 render();
-</script><script>
+</script><script>const ENT=[{"text": "+172 Penutarx: upper labs", "sub": "Anywhere on this floor", "kind": "floor", "code": "F172"}, {"text": "+115 Anetarx: Magicae Sanctuary (cave)", "sub": "Anywhere on this floor", "kind": "floor", "code": "F115"}, {"text": "+105 West corridor landing (+105)", "sub": "Anywhere on this floor", "kind": "floor", "code": "F105"}, {"text": "+85 West corridor (+85)", "sub": "Anywhere on this floor", "kind": "floor", "code": "F85"}, {"text": "+80 Anetarx: study level", "sub": "Anywhere on this floor", "kind": "floor", "code": "F80"}, {"text": "+45 East landing", "sub": "Anywhere on this floor", "kind": "floor", "code": "F45"}, {"text": "+24 Protarx: Relic Keep", "sub": "Anywhere on this floor", "kind": "floor", "code": "F24"}, {"text": "-1 Ground: central hub", "sub": "Anywhere on this floor", "kind": "floor", "code": "F-1"}, {"text": "-6 Ground south annex", "sub": "Anywhere on this floor", "kind": "floor", "code": "F-6"}, {"text": "-36 Protarx: gardens & library", "sub": "Anywhere on this floor", "kind": "floor", "code": "F-36"}, {"text": "-71 Teritarx: preservation vaults", "sub": "Anywhere on this floor", "kind": "floor", "code": "F-71"}, {"text": "-429 Teleport cross", "sub": "Anywhere on this floor", "kind": "floor", "code": "F-429"}, {"text": "-484 Pit: merchants & quest hall", "sub": "Anywhere on this floor", "kind": "floor", "code": "F-484"}, {"text": "Teleport", "sub": "-429 Teleport cross", "kind": "room", "code": "R0"}, {"text": "Principal Vicarum Nomia Room", "sub": "-71 Teritarx: preservation vaults", "kind": "room", "code": "R1"}, {"text": "Pentuarx Junction", "sub": "+172 Penutarx: upper labs", "kind": "room", "code": "R2"}, {"text": "Protarx Infusion Lab", "sub": "-1 Ground: central hub", "kind": "room", "code": "R3"}, {"text": "Anetarx Central Study", "sub": "+80 Anetarx: study level", "kind": "room", "code": "R4"}, {"text": "Anetarx Extraction Lab (+80)", "sub": "+80 Anetarx: study level", "kind": "room", "code": "R5"}, {"text": "Anetarx Extraction Lab (+172)", "sub": "+172 Penutarx: upper labs", "kind": "room", "code": "R6"}, {"text": "Penutarx Reanimation Ward", "sub": "+172 Penutarx: upper labs", "kind": "room", "code": "R7"}, {"text": "Penutarx Statis Lab", "sub": "+172 Penutarx: upper labs", "kind": "room", "code": "R8"}, {"text": "Protarx Relic Keep", "sub": "+24 Protarx: Relic Keep", "kind": "room", "code": "R9"}, {"text": "Anetarx Armory", "sub": "+80 Anetarx: study level", "kind": "room", "code": "R10"}, {"text": "Anetarx Magicae Sanctuary", "sub": "+115 Anetarx: Magicae Sanctuary (cave)", "kind": "room", "code": "R11"}, {"text": "Protarx Gardens", "sub": "-36 Protarx: gardens & library", "kind": "room", "code": "R12"}, {"text": "Protarx Library / Study", "sub": "-36 Protarx: gardens & library", "kind": "room", "code": "R13"}, {"text": "Teritarx Preservation Chamber", "sub": "-71 Teritarx: preservation vaults", "kind": "room", "code": "R14"}, {"text": "Observation Deck", "sub": "+80 Anetarx: study level", "kind": "room", "code": "R15"}, {"text": "The Unseen", "sub": "+80 Anetarx: study level", "kind": "room", "code": "R16"}, {"text": "Keeper of the Matrix", "sub": "+80 Anetarx: study level", "kind": "room", "code": "R17"}, {"text": "Crasis Whesar", "sub": "+172 Penutarx: upper labs", "kind": "room", "code": "R18"}, {"text": "Central hub (ground)", "sub": "-1 Ground: central hub", "kind": "room", "code": "R19"}, {"text": "Pit (merchants / Firiona Vie)", "sub": "-484 Pit: merchants & quest hall", "kind": "room", "code": "R20"}, {"text": "a noctis viratum (Quests)", "sub": "in Pit (merchants / Firiona Vie) · -484 Pit: merchants & quest hall", "kind": "NPC", "code": "R20", "note": "<b>a noctis viratum (Quests)</b> is in <b>Pit (merchants / Firiona Vie)</b> (-484 Pit: merchants &amp; quest hall)."}, {"text": "Serphus Arlis (Quests)", "sub": "in Central hub (ground) · -1 Ground: central hub", "kind": "NPC", "code": "R19", "note": "<b>Serphus Arlis (Quests)</b> is in <b>Central hub (ground)</b> (-1 Ground: central hub)."}, {"text": "Oreda Safli (Quest)", "sub": "on +85 West corridor (+85)", "kind": "NPC", "code": "F85", "note": "<b>Oreda Safli (Quest)</b> is on <b>+85 West corridor (+85)</b> (no named room there, so the whole floor is selected)."}, {"text": "Firiona Vie (Quests)", "sub": "in Pit (merchants / Firiona Vie) · -484 Pit: merchants & quest hall", "kind": "NPC", "code": "R20", "note": "<b>Firiona Vie (Quests)</b> is in <b>Pit (merchants / Firiona Vie)</b> (-484 Pit: merchants &amp; quest hall)."}, {"text": "Bonemaw (Hunter)", "sub": "in Anetarx Magicae Sanctuary · +115 Anetarx: Magicae Sanctuary (cave)", "kind": "hunter", "code": "R11", "note": "<b>Bonemaw (Hunter)</b> is in <b>Anetarx Magicae Sanctuary</b> (+115 Anetarx: Magicae Sanctuary (cave))."}, {"text": "Caldarius (Hunter)", "sub": "in The Unseen · +80 Anetarx: study level", "kind": "hunter", "code": "R16", "note": "<b>Caldarius (Hunter)</b> is in <b>The Unseen</b> (+80 Anetarx: study level)."}, {"text": "Mayor Praetor Livio (Hunter)", "sub": "in Pentuarx Junction · +172 Penutarx: upper labs", "kind": "hunter", "code": "R2", "note": "<b>Mayor Praetor Livio (Hunter)</b> is in <b>Pentuarx Junction</b> (+172 Penutarx: upper labs)."}, {"text": "Mother Virgia (Hunter)", "sub": "in Anetarx Magicae Sanctuary · +115 Anetarx: Magicae Sanctuary (cave)", "kind": "hunter", "code": "R11", "note": "<b>Mother Virgia (Hunter)</b> is in <b>Anetarx Magicae Sanctuary</b> (+115 Anetarx: Magicae Sanctuary (cave))."}, {"text": "Principal Indagator Gordianus (Hunter)", "sub": "in Protarx Infusion Lab · -1 Ground: central hub", "kind": "hunter", "code": "R3", "note": "<b>Principal Indagator Gordianus (Hunter)</b> is in <b>Protarx Infusion Lab</b> (-1 Ground: central hub)."}, {"text": "Principal Indagatrix Lucia (Hunter)", "sub": "in Penutarx Statis Lab · +172 Penutarx: upper labs", "kind": "hunter", "code": "R8", "note": "<b>Principal Indagatrix Lucia (Hunter)</b> is in <b>Penutarx Statis Lab</b> (+172 Penutarx: upper labs)."}, {"text": "Principal Quastori Numicia (Hunter)", "sub": "in Pit (merchants / Firiona Vie) · -484 Pit: merchants & quest hall", "kind": "hunter", "code": "R20", "note": "<b>Principal Quastori Numicia (Hunter)</b> is in <b>Pit (merchants / Firiona Vie)</b> (-484 Pit: merchants &amp; quest hall)."}, {"text": "Principal Vicarum Nonia (Hunter)", "sub": "in Penutarx Reanimation Ward · +172 Penutarx: upper labs", "kind": "hunter", "code": "R7", "note": "<b>Principal Vicarum Nonia (Hunter)</b> is in <b>Penutarx Reanimation Ward</b> (+172 Penutarx: upper labs)."}, {"text": "The Codex Libre (Hunter)", "sub": "in Keeper of the Matrix · +80 Anetarx: study level", "kind": "hunter", "code": "R17", "note": "<b>The Codex Libre (Hunter)</b> is in <b>Keeper of the Matrix</b> (+80 Anetarx: study level)."}, {"text": "Praetor Loricus the Hollow (Hunter)", "sub": "in Anetarx Armory · +80 Anetarx: study level", "kind": "hunter", "code": "R10", "note": "<b>Praetor Loricus the Hollow (Hunter)</b> is in <b>Anetarx Armory</b> (+80 Anetarx: study level)."}, {"text": "Portal Key Attuner", "sub": "in Pentuarx Junction · +172 Penutarx: upper labs", "kind": "ground spawn", "code": "R2", "note": "<b>Portal Key Attuner</b> is in <b>Pentuarx Junction</b> (+172 Penutarx: upper labs)."}, {"text": "Mangled Wedding Band", "sub": "in Teritarx Preservation Chamber · -71 Teritarx: preservation vaults", "kind": "ground spawn", "code": "R14", "note": "<b>Mangled Wedding Band</b> is in <b>Teritarx Preservation Chamber</b> (-71 Teritarx: preservation vaults)."}, {"text": "Merchant (Mercenary Gear)", "sub": "in Pit (merchants / Firiona Vie) · -484 Pit: merchants & quest hall", "kind": "NPC", "code": "R20", "note": "<b>Merchant (Mercenary Gear)</b> is in <b>Pit (merchants / Firiona Vie)</b> (-484 Pit: merchants &amp; quest hall)."}, {"text": "Tuhita (Potions)", "sub": "in Pit (merchants / Firiona Vie) · -484 Pit: merchants & quest hall", "kind": "NPC", "code": "R20", "note": "<b>Tuhita (Potions)</b> is in <b>Pit (merchants / Firiona Vie)</b> (-484 Pit: merchants &amp; quest hall)."}, {"text": "Pelitoi (Brooms)", "sub": "in Pit (merchants / Firiona Vie) · -484 Pit: merchants & quest hall", "kind": "NPC", "code": "R20", "note": "<b>Pelitoi (Brooms)</b> is in <b>Pit (merchants / Firiona Vie)</b> (-484 Pit: merchants &amp; quest hall)."}, {"text": "Artun (Books)", "sub": "in Pit (merchants / Firiona Vie) · -484 Pit: merchants & quest hall", "kind": "NPC", "code": "R20", "note": "<b>Artun (Books)</b> is in <b>Pit (merchants / Firiona Vie)</b> (-484 Pit: merchants &amp; quest hall)."}, {"text": "Leko (Armor)", "sub": "in Pit (merchants / Firiona Vie) · -484 Pit: merchants & quest hall", "kind": "NPC", "code": "R20", "note": "<b>Leko (Armor)</b> is in <b>Pit (merchants / Firiona Vie)</b> (-484 Pit: merchants &amp; quest hall)."}, {"text": "Indri (Food)", "sub": "in Pit (merchants / Firiona Vie) · -484 Pit: merchants & quest hall", "kind": "NPC", "code": "R20", "note": "<b>Indri (Food)</b> is in <b>Pit (merchants / Firiona Vie)</b> (-484 Pit: merchants &amp; quest hall)."}];
+/* Type-ahead picker that sits on top of a (hidden) <select>.
+   makeCombo(select, entries, {labelFor, placeholder})
+   entries: [{text, sub, kind, code, note}]  - choosing one sets select.value = code and fires 'change'.
+   Returns {sync(), picked} - call sync() after the select changes by other means. */
+function makeCombo(sel,entries,opts){
+  opts=opts||{};
+  sel.style.display='none';
+  const wrap=document.createElement('div');wrap.className='cb';
+  const inp=document.createElement('input');
+  inp.type='text';inp.className='cbi';inp.placeholder=opts.placeholder||'Type to search…';
+  inp.autocomplete='off';inp.spellcheck=false;
+  inp.setAttribute('role','combobox');inp.setAttribute('aria-autocomplete','list');inp.setAttribute('aria-expanded','false');
+  const ul=document.createElement('ul');ul.className='cbl';ul.setAttribute('role','listbox');ul.hidden=true;
+  wrap.appendChild(inp);wrap.appendChild(ul);sel.parentNode.insertBefore(wrap,sel.nextSibling);
+  const self={picked:null};
+  let shown=[],hi=-1;
+  const norm=s=>String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  const idx=entries.map(e=>({e:e,n:norm(e.text),s:norm((e.sub||'')+' '+(e.kind||''))}));
+  const KRANK={floor:0,room:1};
+  function score(it,toks){
+    let sc=0;
+    for(const t of toks){
+      const i=it.n.indexOf(t);
+      if(i<0){ if(it.s.indexOf(t)<0) return -1; sc+=1; continue; }
+      sc+= i===0?100 : (/[a-z0-9]/.test(it.n[i-1])?30:60);
+    }
+    return sc;
+  }
+  function search(q){
+    const toks=norm(q).split(/[\s,]+/).filter(Boolean);
+    if(!toks.length) return idx.filter(it=>it.e.kind==='floor'||it.e.kind==='room').map(it=>it.e);
+    const r=[];
+    idx.forEach((it,i)=>{const sc=score(it,toks);if(sc>=0)r.push({e:it.e,sc:sc,i:i})});
+    r.sort((a,b)=>b.sc-a.sc||(KRANK[a.e.kind]===undefined?2:KRANK[a.e.kind])-(KRANK[b.e.kind]===undefined?2:KRANK[b.e.kind])||a.i-b.i);
+    return r.slice(0,14).map(x=>x.e);
+  }
+  function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+  function draw(){
+    ul.innerHTML='';
+    if(!shown.length){ul.innerHTML='<li class="none">No matches</li>';return}
+    shown.forEach((e,i)=>{
+      const li=document.createElement('li');li.setAttribute('role','option');
+      li.className=i===hi?'hi':'';
+      li.innerHTML='<span class="t">'+esc(e.text)+'</span><span class="s">'+esc(e.sub||'')+'</span><span class="k">'+esc(e.kind||'')+'</span>';
+      li.addEventListener('mousedown',ev=>{ev.preventDefault();choose(e)});
+      ul.appendChild(li);
+    });
+    const cur=ul.children[hi];if(cur&&cur.scrollIntoView)cur.scrollIntoView({block:'nearest'});
+  }
+  function open(q){shown=search(q);hi=shown.length?0:-1;ul.hidden=false;inp.setAttribute('aria-expanded','true');draw()}
+  function close(){ul.hidden=true;inp.setAttribute('aria-expanded','false')}
+  function choose(e){
+    self.picked={code:e.code,text:e.text,note:e.note||''};
+    sel.value=e.code;close();
+    sel.dispatchEvent(new Event('change'));
+    self.sync();inp.blur();
+  }
+  self.sync=function(){
+    const p=self.picked;
+    const t=(p&&p.code===sel.value)?p.text:(sel.value?(opts.labelFor?opts.labelFor(sel.value):sel.value):'');
+    if(document.activeElement!==inp)inp.value=t;
+  };
+  inp.addEventListener('focus',()=>{inp.select();open('')});
+  inp.addEventListener('input',()=>open(inp.value));
+  inp.addEventListener('keydown',ev=>{
+    if(ev.key==='ArrowDown'){ev.preventDefault();if(ul.hidden)open(inp.value);else{hi=Math.min(shown.length-1,hi+1);draw()}}
+    else if(ev.key==='ArrowUp'){ev.preventDefault();hi=Math.max(0,hi-1);draw()}
+    else if(ev.key==='Enter'){ev.preventDefault();if(!ul.hidden&&shown[hi])choose(shown[hi])}
+    else if(ev.key==='Escape'){close();inp.blur()}
+  });
+  inp.addEventListener('blur',()=>{
+    close();
+    if(inp.value.trim()===''&&sel.value){self.picked=null;sel.value='';sel.dispatchEvent(new Event('change'))}
+    self.sync();
+  });
+  return self;
+}
+
 const _render=render;
 render=function(){_render();
  svg.querySelectorAll('.pt').forEach(e=>e.classList.remove('pt'));
@@ -2320,5 +2408,14 @@ svg.addEventListener('click',e=>{const t=e.target.closest('.td');if(t){e.stopPro
 document.addEventListener('click',e=>{const w=e.target.closest('.way');if(!w)return;e.stopPropagation();const t=w.textContent.trim();
  try{navigator.clipboard.writeText(t).then(()=>{const o=w.title;w.title='Copied!';w.classList.add('copied');setTimeout(()=>{w.title=o;w.classList.remove('copied')},1200)},()=>{})}catch(_){}},true);
 
+const cbA=makeCombo(selA,ENT,{labelFor:label,placeholder:'Type a room, NPC or floor…'});
+const cbB=makeCombo(selB,ENT,{labelFor:label,placeholder:'Type a room, NPC or floor…'});
+const _render2=render;
+render=function(){_render2();cbA.sync();cbB.sync();
+ const n=(cb,c)=>{const p=cb.picked;return(p&&p.code===c&&p.note)?'<p class="sub" style="margin:0 0 6px">'+p.note+'</p>':''};
+ if(A||B)panel.insertAdjacentHTML('afterbegin',n(cbA,A)+n(cbB,B));
+};
+$('#swap').addEventListener('click',()=>{const t=cbA.picked;cbA.picked=cbB.picked;cbB.picked=t;render()});
+$('#clr').addEventListener('click',()=>{cbA.picked=cbB.picked=null;render()});
 render();
 </script></body></html>

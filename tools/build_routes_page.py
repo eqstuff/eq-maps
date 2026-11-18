@@ -102,6 +102,14 @@ ul.sheet{list-style:none;margin:8px 0 4px;padding:0;columns:2 340px}ul.sheet li{
 table.key{border-collapse:collapse;width:100%;background:var(--card);border:1px solid var(--line)}table.key th,table.key td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:left;font-size:13px;vertical-align:top}table.key th{font-size:11.5px;text-transform:uppercase;color:var(--mut)}
 .legend span{display:inline-block;padding:1px 8px;border-radius:5px;margin-right:6px;font-size:12px}
 """
+_here=os.path.dirname(os.path.abspath(__file__))
+CSS+=open(os.path.join(_here,'combobox.css')).read()
+_ent=[dict(text=ROOMS[i]['name'],sub=R.zl(ROOMS[i]['lv']),kind="room",code=str(i)) for i in order]
+for lp_ in R.label_points():
+    if lp_['room'] is None or lp_['room'] not in order: continue
+    rn=ROOMS[lp_['room']]['name']
+    _ent.append(dict(text=lp_['text'],sub="in "+rn,kind=lp_['kind'],code=str(lp_['room']),note="<b>%s</b> is in <b>%s</b>."%(E(lp_['text']),E(rn))))
+COMBO_JS=open(os.path.join(_here,'combobox.js')).read()
 opts="".join(f"<option value='{i}'>{R.zl(ROOMS[i]['lv'])}  {E(ROOMS[i]['name'])}</option>" for i in order)
 JS="""
 const D=%s;
@@ -117,6 +125,19 @@ f.value=%d;t.value=%d;show();
 document.addEventListener('click',e=>{const w=e.target.closest('.way');if(!w)return;e.stopPropagation();const t=w.textContent.trim();
  try{navigator.clipboard.writeText(t).then(()=>{const o=w.title;w.title='Copied!';w.classList.add('copied');setTimeout(()=>{w.title=o;w.classList.remove('copied')},1200)},()=>{})}catch(_){}},true);
 """ % (json.dumps({k:(dict(html=v['html']) if v else None) for k,v in data.items()}),order[0],order[-3])
+JS+=("""
+const ENT=__ENT__;
+__COMBO__
+const lbl=v=>{const e=ENT.find(x=>x.kind==='room'&&x.code===v);return e?e.text:''};
+const cf=makeCombo(f,ENT,{labelFor:lbl,placeholder:'Type a room or NPC…'}),ct=makeCombo(t,ENT,{labelFor:lbl,placeholder:'Type a room or NPC…'});
+const _show=show;
+show=function(){_show();cf.sync();ct.sync();
+ const n=cb=>{const p=cb.picked;return(p&&p.code===(cb===cf?f:t).value&&p.note)?'<p class="sub">'+p.note+'</p>':''};
+ out.insertAdjacentHTML('afterbegin',n(cf)+n(ct))};
+f.onchange=t.onchange=show;
+document.getElementById('swap').onclick=()=>{const a=f.value,p=cf.picked;f.value=t.value;t.value=a;cf.picked=ct.picked;ct.picked=p;show()};
+show();
+""").replace("__ENT__",json.dumps(_ent,ensure_ascii=False)).replace("__COMBO__",COMBO_JS)
 page=f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{E(Z.ROUTES_TITLE)}</title><style>{CSS}</style></head><body><div class="wrap">
 <h1>{E(Z.ROUTES_TITLE)}</h1>
 <p class="lead">How to walk from any named room to any other, with the compass direction to head when you leave each room. Built from Brewall’s map; stair numbers (S1–S23) match the floors-and-connections page.</p>

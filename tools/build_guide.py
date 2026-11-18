@@ -273,6 +273,7 @@ for lv in ORDER:
     tps=[zl(p_['hi'] if lv==p_['lo'] else p_['lo'])+' ('+p_['id']+')' for p_ in PORT if lv in (p_['lo'],p_['hi'])]
     rows.append(f'<tr><td><a href="#f{lv}"><b>{zl(lv)}</b></a></td><td>{E(NAMES[lv])}</td><td>{", ".join(zl(u) for u in ups) or "–"}</td><td>{", ".join(zl(d) for d in dns) or "–"}</td><td>{", ".join(tps) or "–"}</td></tr>')
 CSS="""
+"""+open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'combobox.css')).read()+"""
 .way{font:12.5px ui-monospace,Menlo,Consolas,monospace;background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:0 5px;cursor:copy;white-space:nowrap;color:var(--fg)}.way:hover{border-color:var(--acc)}.way.copied{background:var(--acc);color:#fff}
 .wrap{max-width:1240px!important}.dgrid{grid-template-columns:minmax(0,880px) minmax(280px,1fr)!important}
 .th path{fill:none;stroke:var(--wall);stroke-width:.9;stroke-linecap:round;opacity:.85}.thb{fill:var(--bg);stroke:var(--line)}
@@ -315,7 +316,19 @@ ol.poi li{margin:2px 0;font-size:13.5px}.num{display:inline-block;width:18px;hei
 """
 JS='\nconst FL=%FL%,RM=%RM%,ANCH=%ANCH%,BOX=%BOX%,X1=%X1%;\nconst GL={N:\'↑\',NE:\'↗\',E:\'→\',SE:\'↘\',S:\'↓\',SW:\'↙\',W:\'←\',NW:\'↖\'};\nlet A=null,B=null,ROUTES=null,loadErr=false;\nconst $=q=>document.querySelector(q),svg=$(\'svg.diag\'),panel=$(\'#panel\'),selA=$(\'#selA\'),selB=$(\'#selB\');\nconst NS=\'http://www.w3.org/2000/svg\';\nconst zl=z=>z>0?\'+\'+z:String(z);\nconst flName={};FL.forEach(f=>flName[f[0]]=f[1]);\nconst rmById={};RM.forEach(r=>rmById[r[0]]=r);\nfunction lvOf(c){return c[0]===\'F\'?+c.slice(1):rmById[+c.slice(1)][2]}\nfunction label(c){return c[0]===\'F\'?zl(+c.slice(1))+\' \'+flName[+c.slice(1)]+\' (floor)\':rmById[+c.slice(1)][1]}\nfunction fill(sel){sel.innerHTML=\'<option value="">–</option>\';\n FL.forEach(f=>{const g=document.createElement(\'optgroup\');g.label=zl(f[0])+\' \'+f[1];\n  const o=document.createElement(\'option\');o.value=\'F\'+f[0];o.textContent=\'Anywhere on this floor\';g.appendChild(o);\n  RM.filter(r=>r[2]===f[0]).forEach(r=>{const o=document.createElement(\'option\');o.value=\'R\'+r[0];o.textContent=r[1];g.appendChild(o)});\n  sel.appendChild(g)})}\nfill(selA);fill(selB);\nfunction pick(c){ if(A===null||(A!==null&&B!==null)){A=c;B=null}else if(c!==A){B=c} render() }\nsvg.addEventListener(\'click\',e=>{const rc=e.target.closest(\'.rc\'),bx=e.target.closest(\'.bx\');\n if(rc){pick(\'R\'+rc.dataset.r);return} if(bx){pick(\'F\'+bx.dataset.lv)}});\nselA.onchange=()=>{A=selA.value||null;if(A&&A===B)B=null;render()};\nselB.onchange=()=>{B=selB.value||null;if(B&&B===A)A=null;render()};\n$(\'#swap\').onclick=()=>{[A,B]=[B,A];render()};\n$(\'#clr\').onclick=()=>{A=B=null;render()};\nfunction tag(lv,txt,cls,off){const g=document.createElementNS(NS,\'g\');g.setAttribute(\'class\',\'tag \'+cls);\n const b=BOX[lv],y=b.y+b.h/2-8+off;g.innerHTML=`<rect x="2" y="${y}" width="40" height="16"/><text x="22" y="${y+11.5}">${txt}</text>`;svg.appendChild(g)}\nfunction render(){\n selA.value=A||\'\';selB.value=B||\'\';\n svg.querySelectorAll(\'.tag,.xp\').forEach(e=>e.remove());\n svg.querySelectorAll(\'.on,.src,.dst,.pick\').forEach(e=>e.classList.remove(\'on\',\'src\',\'dst\',\'pick\'));\n svg.classList.remove(\'active\');\n const boxes={};svg.querySelectorAll(\'.bx\').forEach(b=>boxes[b.dataset.lv]=b);\n const rcs={};svg.querySelectorAll(\'.rc\').forEach(r=>rcs[\'R\'+r.dataset.r]=r);\n if(A&&rcs[A])rcs[A].classList.add(\'src\'); if(B&&rcs[B])rcs[B].classList.add(\'dst\');\n if(A){const bx=boxes[lvOf(A)];bx.classList.add(B?\'src\':\'pick\');tag(lvOf(A),\'FROM\',\'a\',(B&&lvOf(B)===lvOf(A))?-10:0)}\n if(B){boxes[lvOf(B)].classList.add(\'dst\');tag(lvOf(B),\'TO\',\'b\',(A&&lvOf(A)===lvOf(B))?10:0)}\n if(!A){panel.innerHTML=\'<p class="sub">Pick a start (click a floor or room in the diagram, or use the menus).</p>\';return}\n if(!B){panel.innerHTML=`<p><b>From:</b> ${label(A)}</p><p class="sub">Now pick a destination.</p>`;return}\n if(!ROUTES){panel.innerHTML=loadErr?\'<p class="sub">Route data didn’t load, so I can’t show the route.</p>\':\'<p class="sub">Loading routes…</p>\';return}\n const d=ROUTES[A+\'|\'+B];\n const head=`<p style="margin:0 0 4px"><b style="color:#16a34a">${label(A)}</b> → <b style="color:#dc2626">${label(B)}</b></p>`;\n if(!d){panel.innerHTML=head+\'<p class="sub">No walking route between these on the map. The Teleport and pit are cut off from the tower, and the +468 platform has no stairs.</p>\';return}\n svg.classList.add(\'active\');\n const fl=new Set(d.f);fl.forEach(l=>boxes[l]&&boxes[l].classList.add(\'on\'));\n d.s.forEach(s=>{const e=$(\'#e-\'+s.id);if(e)e.classList.add(\'on\');\n  if(s.exit){const y=ANCH[s.id+\'@\'+s.fr];if(y===undefined)return;const g=document.createElementNS(NS,\'g\');g.setAttribute(\'class\',\'xp\');\n   g.innerHTML=`<rect x="${X1-94}" y="${y-9}" width="86" height="18"/><text x="${X1-51}" y="${y+4}">leave ${GL[s.exit]||\'\'} ${s.exit}</text>`;svg.appendChild(g)}});\n panel.innerHTML=head+d.h;\n}\nfetch(\'routes.json\').then(r=>r.json()).then(j=>{ROUTES=j;render()}).catch(()=>{loadErr=true;render()});\nrender();\n'
 JS=(JS.replace('%FL%',json.dumps([[lv,NAMES[lv]] for lv in ORDER if lv not in Z.SKY_LEVELS])).replace('%RM%',json.dumps([[r_['id'],r_['name'],r_['lv']] for r_ in R.ROOMS])).replace('%ANCH%',json.dumps(ANCH)).replace('%BOX%',json.dumps({str(k):v for k,v in BOX.items()})).replace('%X1%',str(x0+boxw)))
-JS2="""
+import html as _h
+_ent=[dict(text=f"{zl(lv)} {NAMES[lv]}",sub="Anywhere on this floor",kind="floor",code="F%d"%lv) for lv in ORDER if lv not in Z.SKY_LEVELS]
+_ent+=[dict(text=r_['name'],sub=f"{zl(r_['lv'])} {NAMES[r_['lv']]}",kind="room",code="R%d"%r_['id']) for r_ in R.ROOMS]
+for lp_ in R.label_points():
+    if lp_['room'] is not None:
+        rn=R.ROOMS[lp_['room']]['name']; code="R%d"%lp_['room']
+        sub=f"in {rn} · {zl(lp_['lv'])} {NAMES[lp_['lv']]}"; note=f"<b>{E(lp_['text'])}</b> is in <b>{E(rn)}</b> ({zl(lp_['lv'])} {E(NAMES[lp_['lv']])})."
+    else:
+        code="F%d"%lp_['lv']; sub=f"on {zl(lp_['lv'])} {NAMES[lp_['lv']]}"; note=f"<b>{E(lp_['text'])}</b> is on <b>{zl(lp_['lv'])} {E(NAMES[lp_['lv']])}</b> (no named room there, so the whole floor is selected)."
+    _ent.append(dict(text=lp_['text'],sub=sub,kind=lp_['kind'],code=code,note=note))
+COMBO_JS=open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'combobox.js')).read()
+COMBO_CSS=open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'combobox.css')).read()
+JS2="const ENT="+json.dumps(_ent,ensure_ascii=False)+";\n"+COMBO_JS+"""
 const _render=render;
 render=function(){_render();
  svg.querySelectorAll('.pt').forEach(e=>e.classList.remove('pt'));
@@ -330,6 +343,15 @@ svg.addEventListener('click',e=>{const t=e.target.closest('.td');if(t){e.stopPro
 document.addEventListener('click',e=>{const w=e.target.closest('.way');if(!w)return;e.stopPropagation();const t=w.textContent.trim();
  try{navigator.clipboard.writeText(t).then(()=>{const o=w.title;w.title='Copied!';w.classList.add('copied');setTimeout(()=>{w.title=o;w.classList.remove('copied')},1200)},()=>{})}catch(_){}},true);
 
+const cbA=makeCombo(selA,ENT,{labelFor:label,placeholder:'Type a room, NPC or floor…'});
+const cbB=makeCombo(selB,ENT,{labelFor:label,placeholder:'Type a room, NPC or floor…'});
+const _render2=render;
+render=function(){_render2();cbA.sync();cbB.sync();
+ const n=(cb,c)=>{const p=cb.picked;return(p&&p.code===c&&p.note)?'<p class="sub" style="margin:0 0 6px">'+p.note+'</p>':''};
+ if(A||B)panel.insertAdjacentHTML('afterbegin',n(cbA,A)+n(cbB,B));
+};
+$('#swap').addEventListener('click',()=>{const t=cbA.picked;cbA.picked=cbB.picked;cbB.picked=t;render()});
+$('#clr').addEventListener('click',()=>{cbA.picked=cbB.picked=null;render()});
 render();
 """
 page=f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{E(Z.TITLE)}</title><style>{CSS}</style></head><body><div class="wrap">

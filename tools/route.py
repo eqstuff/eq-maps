@@ -157,6 +157,33 @@ for p_ in getattr(Z,'PORTALS',[]):
     if a_ and b_:
         PORTALS.append(dict(id=p_['id'],name=p_['name'],a=a_['id'],b=b_['id'],text=p_.get('text','')))
         G.add_edge(('r',a_['id']),('r',b_['id']),weight=float(p_.get('cost',20)),portal=p_['id'])
+_room_cost={}
+def nearest_room(x,y,lv):
+    """Room (id) on floor lv that a point at (x,y) is 'in': least walking distance, else nearest by straight line."""
+    rs=[r_ for r_ in ROOMS if r_['lv']==lv]
+    if not rs or lv not in grids: return None
+    Gd=grids[lv]; c,_=snap(Gd,x,y); best=None
+    for r_ in rs:
+        if r_['id'] not in _room_cost:
+            mcp=MCP_Geometric(np.where(Gd.walk,1.0,np.inf),fully_connected=True)
+            _room_cost[r_['id']]=mcp.find_costs([snapped[('r',r_['id'])]])[0]
+        d=_room_cost[r_['id']][c]
+        if np.isfinite(d) and (best is None or d<best[0]): best=(d,r_['id'])
+    if best is None: best=min((math.dist((x,y),(r_['x'],r_['y'])),r_['id']) for r_ in rs)
+    return best[1]
+def label_points():
+    """Searchable non-room labels (NPCs, merchants, hunters, ground spawns) with the room they are in."""
+    out=[]
+    for p in M.labs:
+        t=p['t']
+        if t.startswith('to #') or Z.is_room_label(t): continue
+        lv=Z.label_level(p['z'],M.lvl)
+        if lv is None or lv not in grids: continue
+        kind='ground spawn' if t.startswith('GS:') else ('hunter' if '(Hunter' in t else 'NPC')
+        text=(t[3:] if t.startswith('GS:') else t).strip()
+        text+=')'*(text.count('(')-text.count(')'))
+        out.append(dict(text=text,kind=kind,lv=lv,room=nearest_room(p['x'],p['y'],lv)))
+    return out
 def fmt(legs): return ", then ".join("%s %d"%(h,l) for h,l in legs) or "a few steps"
 def route(a,b):
     ka,kb=('r',a),('r',b)

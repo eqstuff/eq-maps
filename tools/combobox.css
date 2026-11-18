@@ -1,0 +1,9 @@
+.cb{position:relative}
+.cbi{width:100%;font:inherit;font-size:16px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg)}
+.cbi:focus{outline:2px solid var(--acc);outline-offset:-1px}
+.cbl{position:absolute;z-index:50;left:0;right:0;top:calc(100% + 4px);max-height:340px;overflow:auto;margin:0;padding:4px;list-style:none;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.cbl li{display:flex;gap:8px;align-items:baseline;padding:6px 8px;border-radius:6px;cursor:pointer;color:var(--fg)}
+.cbl li.hi{background:color-mix(in srgb,var(--acc) 16%,transparent)}
+.cbl .t{font-weight:600}.cbl .s{color:var(--mut);font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cbl .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);border:1px solid var(--line);border-radius:9px;padding:0 6px;white-space:nowrap}
+.cbl .none{color:var(--mut);padding:8px;cursor:default}
