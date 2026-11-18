@@ -126,6 +126,8 @@ CORRIDORS = [
     ("Extraction Lab approach", 212, -57, 80), ("Study NE corridor", 48, -58, 80),
     ("Study SE corridor", 52, 17, 80), ("South corridor", 126, 41, 80),
     ("South-east corridor", 215, 64, 80), ("Study west corridor", -85, 18, 80),
+    # floor 0: the lab and the central hub, joined by a bent corridor (one way in, one way out: halves belong to the two rooms)
+    ("Lab-hub corridor (lab end)", -125, -45, 0), ("Lab-hub corridor (hub end)", -75, 0, 0),
     # floor +172: Penutarx
     ("Ring corridor (north)", 16, -171, 172), ("Ring corridor (west)", -95, -75, 172),
     ("Ring corridor (south)", -24, 12, 172), ("Ring corridor (east)", 59, -20, 172),
@@ -145,6 +147,7 @@ CORRIDOR_GROUPS = {
     "Study west corridor": "Anetarx Central Study",
     "Ring corridor (north)": "Ring corridor", "Ring corridor (west)": "Ring corridor", "Ring corridor (south)": "Ring corridor",
     "Ring corridor (east)": "Ring corridor", "Ward south passage": "Ring corridor",
+    "Lab-hub corridor (lab end)": "Protarx Infusion Lab", "Lab-hub corridor (hub end)": "Central hub (ground)",
     # corridors with a single way in and out aren't places of their own: each half belongs to the room (or corridor) it leads to
     "Stasis corridor (north)": "Ring corridor", "Stasis corridor (south)": "Penutarx Stasis Lab",
     "Junction west corridor (west)": "Ring corridor", "Junction west corridor (east)": "Penutarx Junction",
@@ -156,8 +159,15 @@ ROOM_BOX = {
     "Anetarx Extraction Lab": (236, 328, -104, 26),
     "Penutarx Reanimation Ward": (-62, 50, -132, -28), "Penutarx Stasis Lab": (-68, 48, 100, 192),
     "Penutarx Junction": (98, 195, -42, 42),
+    "Protarx Infusion Lab": (-255, -145, -175, 15), "Central hub (ground)": (-48, 48, -52, 52),
 }
 FLOOR_GRAPHS = {
+    0: dict(edges=[
+        ("Protarx Infusion Lab", "Lab-hub corridor (lab end)", [(-155, -45)]),
+        ("Lab-hub corridor (lab end)", "Lab-hub corridor (hub end)", [(-108, -45), (-108, 0)]),
+        ("Lab-hub corridor (hub end)", "Central hub (ground)", []),
+    ], attach=[((36, -156), "Protarx Infusion Lab", [(-173, -172), (-148, -172), (-140, -156)]),
+               ((134, -7), "Central hub (ground)", [(45, 0)])]),
     80: dict(edges=[
         ("Anetarx Central Study", "Study west corridor", [(-57, 18)]),
         ("Anetarx Central Study", "Study NE corridor", [(28, -57)]),
@@ -218,7 +228,7 @@ def floor_note(lv):
     split = ('<p class="note">This floor is split by hand into its rooms and a few <b>corridors</b>. '
              'The map file doesn’t mark corridors; the split is my reading of the outlines, and the directions follow them.</p>')
     notes = {
-        80: split, 172: split,
+        0: split, 80: split, 172: split,
         115: '<p class="note">This is a natural cave, so Good’s draws it with irregular sloped edges rather than clean ramps.</p>',
         470: '<p class="note">A square hall with round pillars, about 470 units above the ground floor. No ramps or labels reach it, so the file doesn’t say how you get there (probably a teleport destination).</p>',
         -430: '<p class="note">A cross-shaped platform at the top of the pit pyramid. Good’s labels a “portal” here. The four long ramps lead down to the pit floor. The map file doesn’t say where the portal leads; the <b>T1</b> link to the central hub comes from in-game experience, and Good’s “Portal out” label sits in the middle of that hub.</p>',
@@ -246,6 +256,6 @@ ROUTES_LIMITS_NOTE = ("Directions are straight-line compass headings between the
                       "experience, not from the map, and is assumed to work both ways. The +470 sky platform isn’t included.")
 
 # Order of the room boxes inside a divided floor in the connections diagram (top to bottom).
-UNIT_ORDER = {80: ["Anetarx Armory", "North corridor", "Middle corridor", "Anetarx Central Study", "South corridor", "Anetarx Extraction Lab"],
+UNIT_ORDER = {0: ["Protarx Infusion Lab", "Central hub (ground)"], 80: ["Anetarx Armory", "North corridor", "Middle corridor", "Anetarx Central Study", "South corridor", "Anetarx Extraction Lab"],
               172: ["Penutarx Reanimation Ward", "Ring corridor", "Stasis corridor", "Penutarx Stasis Lab",
                     "Junction west corridor", "Penutarx Junction", "Junction south corridor"]}
