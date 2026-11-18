@@ -1,0 +1,5 @@
+numpy
+scipy
+scikit-image
+networkx
+matplotlib   # only for tools/debug_grids.py

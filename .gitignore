@@ -11,7 +11,6 @@ venv/
 
 # Scratch output from tools/debug_grids.py and friends
 *.png
-!site/**/*.png
 
 # Editors / OS
 .vscode/
