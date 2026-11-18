@@ -49,9 +49,11 @@ for r_ in R.ROOMS:
     if r_.get('kind')=='room': rooms_by_lv[r_['lv']].append(r_)
 # Units = the boxes of the diagram: one per floor, except floors divided into rooms (Z.FLOOR_GRAPHS), which get one box per room.
 SPLIT=set(getattr(Z,'FLOOR_GRAPHS',{}))
+FOLD=getattr(Z,'FOLD_LEVELS',{})
 UNITS=[];room_unit={};feat_unit={}
 def corr_pieces(lv): return [r_ for r_ in R.ROOMS if r_['lv']==lv and r_.get('kind')=='corridor']
 for lv in ORDER:
+    if lv in FOLD: continue
     if lv in SPLIT:
         want=getattr(Z,'UNIT_ORDER',{}).get(lv,[])
         items=[('room',r_['name'],r_) for r_ in rooms_by_lv.get(lv,[])]
@@ -88,6 +90,7 @@ NB={}
 def end_unit(node):
     """Unit a ramp end belongs to: its floor, or on a divided floor the unit of the piece it attaches to."""
     lv=R.nodes[node][0]
+    lv=FOLD.get(lv,lv)
     if lv not in SPLIT: return str(lv)
     for (a_,b_) in R.within:
         if a_==node and b_[0]=='r': NB[node]=b_; return node_unit(b_)
@@ -149,7 +152,7 @@ for p_ in R.PORTALS:
     ua,ub=room_unit[p_['a']],room_unit[p_['b']]
     lo_,hi_=(ua,ub) if la_<=lb_ else (ub,ua)
     PORT.append(dict(id=p_['id'],lo=min(la_,lb_),hi=max(la_,lb_),ulo=lo_,uhi=hi_,portal=True,name=p_['name'],text=p_['text']))
-edges=[(UK[g['uhi']],UK[g['ulo']],g) for g in st+PORT+LOCAL]
+edges=[(UK[g['uhi']],UK[g['ulo']],g) for g in st+PORT+LOCAL if g['uhi']!=g['ulo']]     # a ramp inside one box (a folded landing) isn't a link
 lanes=[]
 for e in sorted(edges,key=lambda e:(e[1]-e[0])):
     for ln in lanes:
@@ -254,7 +257,7 @@ for u_ in UNITS:
     lv=u_['lv'];key=u_['key'];bx=BOX[key];yy=bx['y']
     cls='box faint' if lv in Z.MINOR_LEVELS else 'box'
     title=u_['title'];ttl_full=NAMES[lv] if u_['kind']=='floor' else f"{u_['title']} ({NAMES[lv]})"
-    sub=' no labels, no links found' if (u_['kind']=='floor' and not chipsof[key] and not byl.get(lv)) else (u_['sub'] if u_['kind']!='floor' else '')
+    sub=' no labels, no links found' if (u_['kind']=='floor' and not chipsof[key] and not byl.get(lv)) else (u_['sub'] if u_['kind']!='floor' else ('includes the '+', '.join(zl(f_) for f_,t_ in FOLD.items() if t_==lv)+' landing' if lv in FOLD.values() else ''))
     pick={'floor':"F%d"%lv,'room':"R%s"%u_['room'],'corr':"R%s"%u_.get('fid')}[u_['kind']]
     o=[f'<g class="bx" data-lv="{lv}" data-u="{key}" data-pick="{pick}"><rect class="{cls}" x="{x0}" y="{yy}" width="{boxw}" height="{bx["h"]}" rx="8"/>'
        f'<text class="zt" x="{x0+LEFT}" y="{yy+23}">{zl(lv)}</text><text class="nt" x="{x0+LEFT+52}" y="{yy+23}">{E(title)}</text>'+(f'<text class="st" x="{x0+LEFT+52}" y="{yy+42}">{E(sub)}</text>' if sub else '')+thumb(u_,yy,bx["h"])+''.join(f'<text class="ex" x="{x0+LEFT}" y="{yy+62+i_*15}"><tspan class="exh">{h_} {dirglyph(h_) if h_ else '•'}</tspan> {E(t_)}</text>' for i_,(_id,h_,t_) in enumerate(ROWS.get(key,[])))]
@@ -346,7 +349,7 @@ def route_entry(sk,dk):
         if k_ and k_ not in floors: floors.append(k_)
     if ev and str(lb) not in floors: floors.append(str(lb))
     return dict(h="<ol class='route'>"+"".join(h)+"</ol>",s=stairs,f=floors)
-EPS=[('f',lv) for lv in ORDER if lv not in Z.SKY_LEVELS and lv not in SPLIT]+[('r',r_['id']) for r_ in R.ROOMS if r_.get('kind') in ('room','feature')]
+EPS=[('f',lv) for lv in ORDER if lv not in Z.SKY_LEVELS and lv not in SPLIT and lv not in FOLD]+[('r',r_['id']) for r_ in R.ROOMS if r_.get('kind') in ('room','feature')]
 def ecode(e): return ('F%d'%e[1]) if e[0]=='f' else ('R%d'%e[1])
 ROUTES={}
 for ea in EPS:
@@ -389,8 +392,10 @@ def plan(lv):
         o.append(f'<g class="pillg"><rect x="{cx-13:.1f}" y="{cy-8:.1f}" width="26" height="16" rx="8"/><text x="{cx:.1f}" y="{cy+4:.2f}" text-anchor="middle">{g["id"]}</text></g>')
     k=0
     for p in pois.get(lv,[]):
-        k+=1; cx,cy=T(p['x'],p['y'])
-        o.append(f'<g class="poig"><circle cx="{cx:.1f}" cy="{cy:.1f}" r="7"/><text x="{cx:.1f}" y="{cy+3.2:.1f}" text-anchor="middle">{k}</text></g>')
+        k+=1; cx,cy=T(p['x'],p['y']); bb=getattr(Z,'ROOM_BOX',{}).get(p['t'])
+        if bb: ax_,ay_=T(bb[0],bb[2]);bx_,by_=T(bb[1],bb[3]);area=f'<rect class="rhl" x="{ax_:.1f}" y="{ay_:.1f}" width="{bx_-ax_:.1f}" height="{by_-ay_:.1f}" rx="6"/>'
+        else: area=f'<circle class="rhl" cx="{cx:.1f}" cy="{cy:.1f}" r="{14+sc*0:.0f}"/>'
+        o.append(f'<g class="poig" data-p="{lv}-{k}"><title>{E(short(p["t"]))}</title>{area}<circle cx="{cx:.1f}" cy="{cy:.1f}" r="7"/><text x="{cx:.1f}" y="{cy+3.2:.1f}" text-anchor="middle">{k}</text></g>')
     o.append('</svg>')
     return "\n".join(o),len(pois.get(lv,[]))
 def headout(lv,g):
@@ -421,7 +426,7 @@ for lv in ORDER:
             conn.append(f'<li><span class="chip" style="background:#a21caf">{p_["id"]}</span> ✦ <b>teleport to {zl(other)} {E(NAMES[other])}</b><div class="sub">{E(p_["text"])}</div></li>')
     pl_list=[]
     for i,p in enumerate(pois.get(lv,[]),1):
-        pl_list.append(f'<li><span class="num">{i}</span>{E(short(p["t"]))}<span class="loc"> {waycmd(p["x"],p["y"],p["z"])}</span></li>')
+        pl_list.append(f'<li class="pi" data-p="{lv}-{i}" tabindex="0"><span class="num">{i}</span>{E(short(p["t"]))}<span class="loc"> {waycmd(p["x"],p["y"],p["z"])}</span></li>')
     note=""
     note=Z.floor_note(lv)
     cards.append(f'<section class="card" id="f{lv}"><header><span class="z">{zl(lv)}</span><h3>{E(NAMES[lv])}</h3><a class="up" href="#connections">↑ Back to connections</a></header>'
@@ -468,14 +473,14 @@ table{border-collapse:collapse;width:100%;background:var(--card);border:1px soli
 .z{font:700 15px ui-monospace,Menlo,monospace;background:var(--acc);color:#fff;padding:2px 9px;border-radius:6px}
 .cols{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:20px}@media(max-width:820px){.cols{grid-template-columns:1fr}}
 .plan{width:100%;height:auto;background:var(--bg);border:1px solid var(--line);border-radius:8px}.wall{stroke:var(--wall);stroke-width:1.3;stroke-linecap:round}.ter{stroke:var(--ter);stroke-width:1}.stair{stroke:var(--stair);stroke-width:1.2}
-.pillg rect{fill:var(--stair)}.pillg text{font:700 10px system-ui;fill:#fff}.poig circle{fill:var(--poi);stroke:var(--bg);stroke-width:1.5}.poig text{font:700 9px system-ui;fill:#fff}
+.pillg rect{fill:var(--stair)}.pillg text{font:700 10px system-ui;fill:#fff}.poig .rhl{fill:var(--acc);fill-opacity:0;stroke:none;pointer-events:none}.poig.hl .rhl,.poig.sel .rhl{fill-opacity:.22;stroke:var(--acc);stroke-width:1.5}.poig.hl circle:not(.rhl),.poig.sel circle:not(.rhl){fill:var(--acc)}.poig{cursor:pointer}li.pi{cursor:pointer;border-radius:6px;padding:1px 4px;margin-left:-4px}li.pi.hl,li.pi.sel{background:rgba(251,146,60,.18)}li.pi.sel{outline:1px solid var(--acc)}.poig.sel text{font-weight:900}.poig circle{fill:var(--poi);stroke:var(--bg);stroke-width:1.5}.poig text{font:700 9px system-ui;fill:#fff}
 ul.conn,ol.poi{margin:0;padding:0;list-style:none}ul.conn li{margin:0 0 9px}.chip{display:inline-block;background:var(--stair);color:#fff;font:700 11px system-ui;padding:1px 7px;border-radius:9px}
 ol.poi li{margin:2px 0;font-size:13.5px}.num{display:inline-block;width:18px;height:18px;border-radius:9px;background:var(--poi);color:#fff;font:700 10px/18px system-ui;text-align:center;margin-right:7px}.loc{color:var(--mut);font-size:11.5px}
 .note{font-size:13px;color:var(--mut);background:var(--bg);border-left:3px solid var(--acc);padding:6px 10px;margin:12px 0 0}code{font:12.5px ui-monospace,Menlo,monospace;background:var(--bg);padding:1px 5px;border-radius:4px;border:1px solid var(--line)}
 .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--mut);margin:8px 0 0}.legend i{display:inline-block;width:22px;height:0;border-top:3px solid;vertical-align:middle;margin-right:6px}
 """
 JS='\nconst FL=%FL%,RM=%RM%,ANCH=%ANCH%,BOX=%BOX%,X1=%X1%;\nconst GL={N:\'↑\',NE:\'↗\',E:\'→\',SE:\'↘\',S:\'↓\',SW:\'↙\',W:\'←\',NW:\'↖\'};\nlet A=null,B=null,ROUTES=null,loadErr=false;\nconst $=q=>document.querySelector(q),svg=$(\'svg.diag\'),panel=$(\'#panel\'),selA=$(\'#selA\'),selB=$(\'#selB\');\nconst NS=\'http://www.w3.org/2000/svg\';\nconst zl=z=>z>0?\'+\'+z:String(z);\nconst flName={};FL.forEach(f=>flName[f[0]]=f[1]);\nconst rmById={};RM.forEach(r=>rmById[r[0]]=r);\nfunction lvOf(c){return c[0]===\'F\'?c.slice(1):rmById[+c.slice(1)][3]}\nfunction label(c){return c[0]===\'F\'?zl(+c.slice(1))+\' \'+flName[+c.slice(1)]+\' (floor)\':rmById[+c.slice(1)][1]}\nfunction fill(sel){sel.innerHTML=\'<option value="">–</option>\';\n FL.forEach(f=>{const g=document.createElement(\'optgroup\');g.label=zl(f[0])+\' \'+f[1];\n  const o=document.createElement(\'option\');o.value=\'F\'+f[0];o.textContent=\'Anywhere on this floor\';g.appendChild(o);\n  RM.filter(r=>r[2]===f[0]).forEach(r=>{const o=document.createElement(\'option\');o.value=\'R\'+r[0];o.textContent=r[1];g.appendChild(o)});\n  sel.appendChild(g)})}\nfill(selA);fill(selB);\nfunction pick(c){ if(A===null||(A!==null&&B!==null)){A=c;B=null}else if(c!==A){B=c} render() }\nsvg.addEventListener(\'click\',e=>{const rc=e.target.closest(\'.rc\'),bx=e.target.closest(\'.bx\');\n if(rc){pick(\'R\'+rc.dataset.r);return} if(bx&&bx.dataset.pick){pick(bx.dataset.pick)}});\nselA.onchange=()=>{A=selA.value||null;if(A&&A===B)B=null;render()};\nselB.onchange=()=>{B=selB.value||null;if(B&&B===A)A=null;render()};\n$(\'#swap\').onclick=()=>{[A,B]=[B,A];render()};\n$(\'#clr\').onclick=()=>{A=B=null;render()};\nfunction tag(lv,txt,cls,off){const g=document.createElementNS(NS,\'g\');g.setAttribute(\'class\',\'tag \'+cls);\n const b=BOX[lv],y=b.y+b.h/2-8+off;g.innerHTML=`<rect x="2" y="${y}" width="40" height="16"/><text x="22" y="${y+11.5}">${txt}</text>`;svg.appendChild(g)}\nfunction render(){\n selA.value=A||\'\';selB.value=B||\'\';\n svg.querySelectorAll(\'.tag,.xp\').forEach(e=>e.remove());\n svg.querySelectorAll(\'.on,.src,.dst,.pick\').forEach(e=>e.classList.remove(\'on\',\'src\',\'dst\',\'pick\'));\n svg.classList.remove(\'active\');\n const boxes={};svg.querySelectorAll(\'.bx\').forEach(b=>boxes[b.dataset.u]=b);\n const rcs={};svg.querySelectorAll(\'.rc\').forEach(r=>rcs[\'R\'+r.dataset.r]=r);\n if(A&&rcs[A])rcs[A].classList.add(\'src\'); if(B&&rcs[B])rcs[B].classList.add(\'dst\');\n if(A){const bx=boxes[lvOf(A)];bx.classList.add(B?\'src\':\'pick\');tag(lvOf(A),\'FROM\',\'a\',(B&&lvOf(B)===lvOf(A))?-10:0)}\n if(B){boxes[lvOf(B)].classList.add(\'dst\');tag(lvOf(B),\'TO\',\'b\',(A&&lvOf(A)===lvOf(B))?10:0)}\n if(!A){panel.innerHTML=\'<p class="sub">Pick a start (click a floor or room in the diagram, or use the menus).</p>\';return}\n if(!B){panel.innerHTML=`<p><b>From:</b> ${label(A)}</p><p class="sub">Now pick a destination.</p>`;return}\n if(!ROUTES){panel.innerHTML=loadErr?\'<p class="sub">Route data didn’t load, so I can’t show the route.</p>\':\'<p class="sub">Loading routes…</p>\';return}\n const d=ROUTES[A+\'|\'+B];\n const head=`<p style="margin:0 0 4px"><b style="color:#16a34a">${label(A)}</b> → <b style="color:#dc2626">${label(B)}</b></p>`;\n if(!d){panel.innerHTML=head+\'<p class="sub">No walking route between these on the map. The Teleport and pit are cut off from the tower, and the +468 platform has no stairs.</p>\';return}\n svg.classList.add(\'active\');\n const fl=new Set(d.f);fl.forEach(l=>boxes[l]&&boxes[l].classList.add(\'on\'));\n for(let i=0;i+1<d.f.length;i++){const e=$(\'#e-l-\'+[d.f[i],d.f[i+1]].sort().join(\'-\'));if(e)e.classList.add(\'on\')}\n d.s.forEach(s=>{const e=$(\'#e-\'+s.id);if(e)e.classList.add(\'on\');\n  if(s.exit){const y=ANCH[s.id+\'@\'+s.fr];if(y===undefined)return;const g=document.createElementNS(NS,\'g\');g.setAttribute(\'class\',\'xp\');\n   g.innerHTML=`<rect x="${X1-94}" y="${y-9}" width="86" height="18"/><text x="${X1-51}" y="${y+4}">leave ${GL[s.exit]||\'\'} ${s.exit}</text>`;svg.appendChild(g)}});\n panel.innerHTML=head+d.h;\n}\nfetch(\'routes.json?v=%RV%\').then(r=>r.json()).then(j=>{ROUTES=j;render()}).catch(()=>{loadErr=true;render()});\nrender();\n'
-JS=(JS.replace('%FL%',json.dumps([[lv,NAMES[lv]] for lv in ORDER if lv not in Z.SKY_LEVELS])).replace('%RM%',json.dumps([[r_['id'],r_['name'],r_['lv'],node_unit(('r',r_['id']))] for r_ in R.ROOMS if r_.get('kind') in ('room','feature')])).replace('%ANCH%',json.dumps(ANCH)).replace('%BOX%',json.dumps(BOX)).replace('%X1%',str(x0+boxw)).replace('%RV%',RV))
+JS=(JS.replace('%FL%',json.dumps([[lv,NAMES[lv]] for lv in ORDER if lv not in Z.SKY_LEVELS and lv not in FOLD])).replace('%RM%',json.dumps([[r_['id'],r_['name'],r_['lv'],node_unit(('r',r_['id']))] for r_ in R.ROOMS if r_.get('kind') in ('room','feature')])).replace('%ANCH%',json.dumps(ANCH)).replace('%BOX%',json.dumps(BOX)).replace('%X1%',str(x0+boxw)).replace('%RV%',RV))
 import html as _h
 _ent=[dict(text=f"{zl(lv)} {NAMES[lv]}",sub="Anywhere on this floor",kind="floor",code="F%d"%lv) for lv in ORDER if lv not in Z.SKY_LEVELS and lv not in SPLIT]
 _ent+=[dict(text=r_['name'],sub=f"{zl(r_['lv'])} {NAMES[r_['lv']]}",kind=("room" if r_['kind']=='room' else "corridor"),code="R%d"%r_['id']) for r_ in R.ROOMS if r_.get('kind') in ('room','feature')]
@@ -535,6 +540,19 @@ page=f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="
 <p class="sub"><b>How I decoded it.</b> Each <code>L</code> line is a wall segment <code>x1,y1,z1,x2,y2,z2,r,g,b</code>; each <code>P</code> line is a label <code>x,y,z,r,g,b,size,text</code>. Floors are groups of flat segments at the same Z. A stair is a bundle of sloped segments joining two floors. <code>_1</code> holds the in-zone labels. <code>_2</code> holds the key (ground-spawn and Hunter placeholder legend), drawn far outside the zone at x up to 2030, so I excluded it from the plans.</p>
 <p class="sub"><b>What the file can’t tell you.</b> It has no doors, zone lines, teleport destinations or elevator logic. {Z.LIMITS_NOTE}</p>
 <p class="sub">{Z.SOURCE_NOTE}</p>
-</div><script>{JS}</script><script>{JS2}</script></body></html>"""
+</div><script>{JS}</script><script>{JS2}</script><script>
+(function(){{
+ const all=x=>document.querySelectorAll('[data-p="'+x+'"]');
+ function set(x,c,on){{all(x).forEach(e=>e.classList.toggle(c,on))}}
+ document.addEventListener('mouseover',e=>{{const t=e.target.closest('[data-p]');if(t)set(t.dataset.p,'hl',true)}});
+ document.addEventListener('mouseout',e=>{{const t=e.target.closest('[data-p]');if(t)set(t.dataset.p,'hl',false)}});
+ document.addEventListener('focusin',e=>{{const t=e.target.closest('li.pi');if(t)set(t.dataset.p,'hl',true)}});
+ document.addEventListener('focusout',e=>{{const t=e.target.closest('li.pi');if(t)set(t.dataset.p,'hl',false)}});
+ function toggle(t){{const x=t.dataset.p,fl=x.split('-')[0],on=!t.classList.contains('sel');
+  document.querySelectorAll('[data-p^="'+fl+'-"].sel').forEach(e=>e.classList.remove('sel'));if(on)set(x,'sel',true)}}
+ document.addEventListener('click',e=>{{const t=e.target.closest('[data-p]');if(t)toggle(t)}});
+ document.addEventListener('keydown',e=>{{if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('li.pi')){{e.preventDefault();toggle(e.target)}}}});
+}})();
+</script></body></html>"""
 open(os.path.join(OUT_DIR,'index.html'),'w').write(page)
 print(len(page),len(st),len(lanes))

@@ -27,6 +27,9 @@ ROUTE_NAMES = {172: "Upper labs", 115: "Magicae cave", 105: "West corridor (+105
                -35: "Gardens level", -70: "Preservation vaults", -430: "Teleport cross",
                -483: "Pit"}
 FLOOR_ORDER = [470, 172, 115, 105, 85, 80, 45, 24, 0, -5, -35, -70, -430, -483]  # top to bottom
+# A landing too small to be a place of its own is folded into the floor it hangs off: ramps ending there count as ramps
+# of that floor in the connections diagram (level -> level it is folded into).
+FOLD_LEVELS = {105: 85}
 MINOR_LEVELS = (105, 85, -5, 470)   # drawn with dashed boxes (landings / annexes)
 SKY_LEVELS = (470,)                 # geometry nothing connects to: not selectable in the UI
 
