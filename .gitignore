@@ -1,0 +1,21 @@
+# Source map data fetched by tools/fetch_maps.sh (not redistributed here)
+data/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# Scratch output from tools/debug_grids.py and friends
+*.png
+!site/**/*.png
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
