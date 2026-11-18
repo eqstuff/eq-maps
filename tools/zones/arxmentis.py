@@ -77,11 +77,11 @@ ROOM_LABELS = {
     "Protarx Relic Keep": "Protarx Relic Keep", "Anetarx Magicae Sanctuary": "Anetarx Magicae Sanctuary",
     "Protarx Gardens": "Protarx Gardens", "Protarx Library": "Protarx Library",
     "the study": "Protarx Study", "Teritarx Preservation Chamber": "Teritarx Preservation Chamber",
-    "Keeper of the Matrix": "Keeper of the Matrix", "Analysis room": "Analysis Room",
-    "Medical Chamber": "Medical Chamber", "Feeding Chamber": "Feeding Chamber",
+    "Feeding Chamber": "Feeding Chamber",
     "First Generator": "First Generator", "Second Generator": "Second Generator",
-    "Third Generator": "Third Generator",
 }
+# Keeper of the Matrix, Analysis room, Medical Chamber and the Third Generator sit INSIDE the
+# Study / Extraction Lab / Reanimation Ward / Stasis Lab, so they are searchable points, not rooms.
 def clean_label(t):
     return re.sub(r"\s+", " ", t.replace("_", " ")).strip()
 def is_room_label(t):
@@ -109,6 +109,70 @@ EXTRA_ROOMS = [("Teleport", 1, -108, -430),
                ("Central hub (ground)", 0, 0, 0),
                ("Pit (merchants / Firiona Vie)", 0, -20, -483)]
 
+# --- corridors and floor graphs ----------------------------------------------
+# Floors with several rooms are divided by hand (my reading of the outlines, see docs/DESIGN.md):
+# each corridor segment, and each T-junction, is its own selectable "place" so a route can say
+# which way to leave it.  CORRIDORS: (name, x, y, level) with x, y = a point on its centre line.
+# FLOOR_GRAPHS[level]["edges"]: (place A, place B, [via points]) - the walk from A's anchor through
+# the via points (doors, corners) to B's anchor.  Ramp ends attach to the nearest place unless
+# listed in "attach": ((x, y) near the ramp end, place, [via points]).
+CORRIDORS = [
+    # floor +80: Anetarx
+    ("Armory corridor", 65, -150, 80), ("North junction", 65, -123, 80),
+    ("Cave-ramp corridor", 10, -123, 80), ("North corridor (west)", 100, -123, 80),
+    ("North T-junction", 129, -123, 80), ("North corridor (east)", 165, -123, 80),
+    ("Middle corridor", 129, -78, 80), ("East T-junction", 129, -34, 80),
+    ("East corridor (west)", 98, -34, 80), ("East corridor (east)", 165, -34, 80),
+    ("Extraction Lab approach", 212, -57, 80), ("Study NE corridor", 48, -58, 80),
+    ("Study SE corridor", 52, 17, 80), ("South corridor", 126, 41, 80),
+    ("South-east corridor", 215, 64, 80), ("Study west corridor", -85, 18, 80),
+    # floor +172: Penutarx
+    ("Ring corridor (north)", 16, -171, 172), ("Ring corridor (west)", -95, -75, 172),
+    ("Ring corridor (south)", -24, 12, 172), ("Ring corridor (east)", 59, -20, 172),
+    ("Ward south passage", -24, -12, 172), ("Stasis corridor (north)", 2, 45, 172),
+    ("Stasis corridor (south)", -21, 88, 172), ("Junction west corridor", 83, -20, 172),
+    ("Ramp corridor", 81, 150, 172), ("Junction south corridor", 130, 95, 172),
+]
+FLOOR_GRAPHS = {
+    80: dict(edges=[
+        ("Anetarx Central Study", "Study west corridor", [(-57, 18)]),
+        ("Anetarx Central Study", "Study NE corridor", [(28, -57)]),
+        ("Study NE corridor", "East corridor (west)", [(62, -55), (68, -36)]),
+        ("East corridor (west)", "East T-junction", []),
+        ("East T-junction", "East corridor (east)", []),
+        ("East corridor (east)", "Extraction Lab approach", [(190, -36), (200, -52)]),
+        ("Extraction Lab approach", "Anetarx Extraction Lab", [(232, -57)]),
+        ("East T-junction", "Middle corridor", []),
+        ("Middle corridor", "North T-junction", [(129, -110)]),
+        ("North T-junction", "North corridor (west)", []),
+        ("North T-junction", "North corridor (east)", []),
+        ("North corridor (west)", "North junction", []),
+        ("North junction", "Cave-ramp corridor", []),
+        ("North junction", "Armory corridor", []),
+        ("Armory corridor", "Anetarx Armory", [(65, -172)]),
+        ("Anetarx Central Study", "Study SE corridor", [(28, 17)]),
+        ("Study SE corridor", "South corridor", [(66, 24), (66, 41)]),
+        ("South corridor", "South-east corridor", [(186, 42), (186, 64)]),
+        ("South-east corridor", "Anetarx Extraction Lab", [(263, 64), (263, 40)]),
+    ]),
+    172: dict(edges=[
+        ("Penutarx Reanimation Ward", "Ring corridor (north)", [(16, -125)]),
+        ("Penutarx Reanimation Ward", "Ward south passage", [(-24, -30)]),
+        ("Ward south passage", "Ring corridor (south)", [(-24, 5)]),
+        ("Ring corridor (north)", "Ring corridor (west)", [(-95, -171)]),
+        ("Ring corridor (west)", "Ring corridor (south)", [(-95, 12)]),
+        ("Ring corridor (south)", "Ring corridor (east)", [(59, 12)]),
+        ("Ring corridor (east)", "Ring corridor (north)", [(59, -171)]),
+        ("Ring corridor (south)", "Stasis corridor (north)", [(2, 12)]),
+        ("Stasis corridor (north)", "Stasis corridor (south)", [(2, 68), (-21, 68)]),
+        ("Stasis corridor (south)", "Penutarx Stasis Lab", [(-21, 105)]),
+        ("Ring corridor (east)", "Junction west corridor", []),
+        ("Junction west corridor", "Penutarx Junction", [(100, -20)]),
+        ("Ramp corridor", "Junction south corridor", [(81, 122), (130, 122)]),
+        ("Junction south corridor", "Penutarx Junction", [(130, 59), (134, 45)]),
+    ], attach=[((-85, 39), "Ring corridor (south)", [(-95, 12)])]),
+}
+
 # --- teleports (not in the map file) ------------------------------------------
 # Links between two named rooms on different floors.  Added to the route graph as an
 # extra connection (two-way).  Source: in-game experience of the repo owner; Good's map labels a "portal" at the cross
@@ -126,7 +190,11 @@ EXTRA_GRID_LEVELS = [-430, -483]                                    # cut off fr
 
 # --- page text --------------------------------------------------------------
 def floor_note(lv):
+    split = ('<p class="note">This floor is split by hand into its rooms and <b>corridor pieces</b> (numbered on the plan). '
+             'Each T-junction is its own piece, so a route can say which way to leave it. The map file doesn’t mark corridors; '
+             'the split is my reading of the outlines, and routes follow the corridors between the pieces.</p>')
     notes = {
+        80: split, 172: split,
         115: '<p class="note">This is a natural cave, so Good’s draws it with irregular sloped edges rather than clean ramps.</p>',
         470: '<p class="note">A square hall with round pillars, about 470 units above the ground floor. No ramps or labels reach it, so the file doesn’t say how you get there (probably a teleport destination).</p>',
         -430: '<p class="note">A cross-shaped platform at the top of the pit pyramid. Good’s labels a “portal” here. The four long ramps lead down to the pit floor. The map file doesn’t say where the portal leads; the <b>T1</b> link to the central hub comes from in-game experience, and Good’s “Portal out” label sits in the middle of that hub.</p>',
@@ -142,12 +210,13 @@ def intro(n_stairs):
 LIMITS_NOTE = ("The way into the sky platform is unknown, and the teleport link (T1) is added from in-game experience rather than read from the map. Floor names come from "
                "Good’s room labels (Teritarx / Protarx / Anetarx / Penutarx look like four tiers, low to high); "
                "where a floor had no label it is described by what it connects. Directions are straight lines between points: "
-               "Good’s outlines have gaps, so the walls aren’t used to find a path.")
+               "Good’s outlines have gaps, so the walls aren’t used to find a path, except on the two floors with several rooms (+80, +172), "
+               "which I divided into rooms and corridors by hand.")
 SOURCE_NOTE = ("Source: <a href=\"https://github.com/RedGuides/goodurden-maps\">RedGuides/goodurden-maps</a> on GitHub "
                "(Good’s Maps, by Goodurden), commit 29b1480. Unofficial derived guide; map data belongs to its author.")
 
 ROUTES_TITLE = "Arx Mentis: room-to-room routes"
 ROUTES_LIMITS_NOTE = ("Directions are straight-line compass headings between the room, the ramp ends and the next room; "
-                      "walls aren’t considered, so follow the corridors toward that heading. The pit and the teleport cross "
+                      "walls aren’t considered, so follow the corridors toward that heading. The Anetarx (+80) and Penutarx (+172) floors are divided by hand into rooms and corridor pieces (a corridor or T-junction can be picked as a start or destination), and their routes follow those corridors. The pit and the teleport cross "
                       "connect to the tower only through the teleport link T1 (central hub), which comes from in-game "
                       "experience, not from the map, and is assumed to work both ways. The +470 sky platform isn’t included.")

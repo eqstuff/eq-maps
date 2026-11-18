@@ -29,6 +29,9 @@ pois=collections.defaultdict(list)
 for p in M.labs:
     lv=Z.label_level(p['z'],M.lvl)
     pois[lv].append(p)
+# corridor pieces are numbered on the plans too, so the names in a route can be found on the picture
+for r_ in R.ROOMS:
+    if r_.get('kind')=='corridor': pois[r_['lv']].append(dict(x=r_['x'],y=r_['y'],z=r_['lv'],t=r_['name']))
 def near_poi(lv,xy,maxd=90):
     best=None
     for p in pois.get(lv,[]):
@@ -43,7 +46,8 @@ def clean(t): return t+')'*(t.count('(')-t.count(')'))
 def short(t): return clean(t)
 # ---------- connection diagram (interactive) ----------
 rooms_by_lv=collections.defaultdict(list)
-for r_ in R.ROOMS: rooms_by_lv[r_['lv']].append(r_)
+for r_ in R.ROOMS:
+    if r_.get('kind')=='room': rooms_by_lv[r_['lv']].append(r_)
 x0=46;boxw=580;laneg=16;gap=14;CHIPR=boxw-100;LEFT=116;TW=92
 BOX={};y=0
 chipsof={}
@@ -158,7 +162,27 @@ def route_entry(sk,dk):
     h=[];stairs=[];floors=[la];pend=''
     if sv: h.append(f"<li>Start anywhere on <b>{zl(la)} {E(NAMES[la])}</b>.</li>")
     first=not sv
+    walk=[]
+    def flush():
+        nonlocal first,pend
+        if not walk: return
+        legs=[];via=[]
+        for i_,(u_,v_) in enumerate(walk):
+            legs=R.merge_legs(legs,R.within[(u_,v_)][1])
+            if i_<len(walk)-1: via.append(R.ROOMS[v_[1]]['name'])
+        u,v=walk[0][0],walk[-1][1]
+        hd=legs[0][0] if legs else ''
+        if first and u[0]=='r': head=(f"Leave <b>{E(R.ROOMS[u[1]]['name'])}</b> heading <b class='dir'>{hd} {dirglyph(hd)}</b>" if hd else f"Leave <b>{E(R.ROOMS[u[1]]['name'])}</b>")
+        else: head=f"Head <b class='dir'>{hd} {dirglyph(hd)}</b>" if hd else "Head"
+        first=False
+        if v[0]=='r': tail=f"to <b>{E(R.ROOMS[v[1]]['name'])}</b>"+(" <span class='sub'>(closed outline on the map: walk up to its walls and look for the door)</span>" if v in R.SEALED else "")
+        else:
+            n_=R.nodes[v]; tail=f"to the <span class='chip'>{v[1]}</span> link <span class='sub'>({waycmd(n_[1],n_[2],n_[0])})</span>"
+        vtxt=f" <span class='sub'>via {', '.join(E(x) for x in via)}</span>" if via else ''
+        h.append(f"<li>{head}: {legs_txt(legs)} {tail}{vtxt}</li>")
+        pend=hd; walk.clear()
     for u,v in zip(Q[:-1],Q[1:]):
+        if not (u[0]!='s' or v[0]!='s' or u[1]!=v[1] or u[2]==v[2]) or GR.edges[u,v].get('portal'): flush()
         if GR.edges[u,v].get('portal'):
             pid=GR.edges[u,v]['portal'];pp=[p_ for p_ in R.PORTALS if p_['id']==pid][0]
             fr_,to_=R.nodes[u][0],R.nodes[v][0]
@@ -174,16 +198,8 @@ def route_entry(sk,dk):
             h.append(f"<li><span class='chip'>{u[1]}</span> {'▲ up' if up else '▼ down'} to <b>{zl(v[2])}</b> ({E(NAMES[v[2]])})</li>")
             pend=''
         else:
-            d_,legs=R.within[(u,v)]
-            hd=legs[0][0] if legs else ''
-            if first and u[0]=='r': head=(f"Leave <b>{E(R.ROOMS[u[1]]['name'])}</b> heading <b class='dir'>{hd} {dirglyph(hd)}</b>" if hd else f"Leave <b>{E(R.ROOMS[u[1]]['name'])}</b>")
-            else: head=f"Head <b class='dir'>{hd} {dirglyph(hd)}</b>" if hd else "Head"
-            first=False
-            if v[0]=='r': tail=f"to <b>{E(R.ROOMS[v[1]]['name'])}</b>"+(" <span class='sub'>(closed outline on the map: walk up to its walls and look for the door)</span>" if v in R.SEALED else "")
-            else:
-                n_=R.nodes[v]; tail=f"to the <span class='chip'>{v[1]}</span> link <span class='sub'>({waycmd(n_[1],n_[2],n_[0])})</span>"
-            h.append(f"<li>{head}: {legs_txt(legs)} {tail}</li>")
-            pend=hd
+            walk.append((u,v))
+    flush()
     h.append(f"<li class='done'>Arrive at <b>{E(B_) if B_ else zl(lb)+' '+E(NAMES[lb])}</b>.</li>")
     return dict(h="<ol class='route'>"+"".join(h)+"</ol>",s=stairs,f=floors)
 EPS=[('f',lv) for lv in ORDER if lv not in Z.SKY_LEVELS]+[('r',r_['id']) for r_ in R.ROOMS]
@@ -315,7 +331,7 @@ JS='\nconst FL=%FL%,RM=%RM%,ANCH=%ANCH%,BOX=%BOX%,X1=%X1%;\nconst GL={N:\'↑\',
 JS=(JS.replace('%FL%',json.dumps([[lv,NAMES[lv]] for lv in ORDER if lv not in Z.SKY_LEVELS])).replace('%RM%',json.dumps([[r_['id'],r_['name'],r_['lv']] for r_ in R.ROOMS])).replace('%ANCH%',json.dumps(ANCH)).replace('%BOX%',json.dumps({str(k):v for k,v in BOX.items()})).replace('%X1%',str(x0+boxw)))
 import html as _h
 _ent=[dict(text=f"{zl(lv)} {NAMES[lv]}",sub="Anywhere on this floor",kind="floor",code="F%d"%lv) for lv in ORDER if lv not in Z.SKY_LEVELS]
-_ent+=[dict(text=r_['name'],sub=f"{zl(r_['lv'])} {NAMES[r_['lv']]}",kind="room",code="R%d"%r_['id']) for r_ in R.ROOMS]
+_ent+=[dict(text=r_['name'],sub=f"{zl(r_['lv'])} {NAMES[r_['lv']]}",kind=r_.get('kind','room'),code="R%d"%r_['id']) for r_ in R.ROOMS]
 for lp_ in R.label_points():
     if lp_['room'] is not None:
         rn=R.ROOMS[lp_['room']]['name']; code="R%d"%lp_['room']

@@ -27,6 +27,8 @@ _cnt=collections.Counter(r_['name'] for r_ in ROOMS)
 for r_ in ROOMS:
     if _cnt[r_['name']]>1: r_['name']='%s (%s)'%(r_['name'],zl(r_['lv']))
 for name,x,y,lv in Z.EXTRA_ROOMS: ROOMS.append(dict(name=name,x=x,y=y,lv=lv))
+for r_ in ROOMS: r_['kind']='room'
+for name,x,y,lv in getattr(Z,'CORRIDORS',[]): ROOMS.append(dict(name=name,x=x,y=y,lv=lv,kind='corridor'))
 for i,r in enumerate(ROOMS): r['id']=i
 STAIRS=M.groups
 # ----- grids
@@ -137,10 +139,43 @@ def legs_from(cells,G):
         else: out.append([h,l])
     return [(h,max(10,int(round(l/10.0))*10)) for h,l in out]
 G=nx.Graph()
+def _legs_from_points(pts):
+    raw=[]
+    for a,b in zip(pts[:-1],pts[1:]):
+        if math.dist(a,b)>=1: raw.append([hd(b[0]-a[0],b[1]-a[1]),math.dist(a,b)])
+    out=[]
+    for h,l in raw:
+        if l<14 and len(raw)>1: continue
+        if out and out[-1][0]==h: out[-1][1]+=l
+        else: out.append([h,l])
+    return [(h,max(10,int(round(l/10.0))*10)) for h,l in out]
+def _floor_graph(lv,ks,FG):
+    """A floor divided by hand into rooms and corridor pieces: only the listed neighbours are joined
+    (through their via points); ramp ends attach to the nearest piece (or per FG['attach'])."""
+    byname={r_['name']:r_ for r_ in ROOMS if r_['lv']==lv}
+    def link(a,b,pts):
+        d=sum(math.dist(p,q) for p,q in zip(pts[:-1],pts[1:]))
+        within[(a,b)]=(d,_legs_from_points(pts)); within[(b,a)]=(d,_legs_from_points(pts[::-1]))
+        G.add_edge(a,b,weight=d+1)
+    for a_,b_,via in FG['edges']:
+        A,B=byname[a_],byname[b_]
+        link(('r',A['id']),('r',B['id']),[(A['x'],A['y'])]+[tuple(v) for v in via]+[(B['x'],B['y'])])
+    places=[('r',r_['id']) for r_ in byname.values()]
+    for k in ks:
+        if k[0]!='s': continue
+        x,y=nodes[k][1],nodes[k][2]; tgt=None;via=[]
+        for (px,py),pname,pv in FG.get('attach',[]):
+            if math.dist((x,y),(px,py))<25: tgt=('r',byname[pname]['id']);via=[tuple(v) for v in pv]
+        if tgt is None: tgt=min(places,key=lambda p:math.dist((x,y),(nodes[p][1],nodes[p][2])))
+        link(k,tgt,[(x,y)]+via+[(nodes[tgt][1],nodes[tgt][2])])
 fl=collections.defaultdict(list)
 for k,(lv,x,y) in nodes.items(): fl[lv].append(k)
 within={}
 for lv,ks in fl.items():
+    FG=getattr(Z,'FLOOR_GRAPHS',{}).get(lv)
+    if STRAIGHT and FG:
+        _floor_graph(lv,ks,FG)
+        continue
     if STRAIGHT:
         for a in ks:
             for b in ks:
@@ -175,7 +210,7 @@ for p_ in getattr(Z,'PORTALS',[]):
 _room_cost={}
 def nearest_room(x,y,lv):
     """Room (id) on floor lv that a point at (x,y) is 'in': least walking distance, else nearest by straight line."""
-    rs=[r_ for r_ in ROOMS if r_['lv']==lv]
+    rs=[r_ for r_ in ROOMS if r_['lv']==lv and r_.get('kind')=='room']
     if not rs or lv not in FLOORS: return None
     if STRAIGHT: return min(rs,key=lambda r_:math.dist((x,y),(r_['x'],r_['y'])))['id']
     Gd=grids[lv]; c,_=snap(Gd,x,y); best=None
@@ -205,6 +240,12 @@ def label_points():
         if lv is None or lv not in FLOORS: continue
         out.append(dict(text=e['name'],kind=e['kind'],lv=lv,room=nearest_room(x,y,lv)))
     return out
+def merge_legs(a,b):
+    out=[list(x) for x in a]
+    for h,l in b:
+        if out and out[-1][0]==h: out[-1][1]+=l
+        else: out.append([h,l])
+    return [(h,l) for h,l in out]
 def fmt(legs): return ", then ".join("%s %d"%(h,l) for h,l in legs) or "a few steps"
 def route(a,b):
     ka,kb=('r',a),('r',b)
@@ -228,7 +269,13 @@ def route(a,b):
             tgt=('stairs '+v[1]) if v[0]=='s' else ri[v[1]]['name']
             steps.append(dict(k='walk',legs=legs,to=tgt,lv=nodes[u][0],toR=(v[0]=='r'),fromR=(u[0]=='r'),xy=(nodes[v][1],nodes[v][2]),sealed=(v in SEALED)))
         i+=1
-    return dict(steps=steps,dist=int(dist),stairs=nst)
+    merged=[]
+    for s in steps:      # consecutive walking hops (room -> corridor -> junction -> room) read as one walk
+        if merged and s['k']=='walk' and merged[-1]['k']=='walk':
+            m=merged[-1]; m['via']=m.get('via',[])+[m['to']]
+            m['legs']=merge_legs(m['legs'],s['legs']); m['to']=s['to']; m['toR']=s['toR']; m['xy']=s['xy']; m['sealed']=s['sealed']
+        else: merged.append(s)
+    return dict(steps=merged,dist=int(dist),stairs=nst)
 if __name__=="__main__":
     ids=[r['id'] for r in ROOMS]
     miss=[(ROOMS[a]['name'],ROOMS[b]['name']) for a in ids for b in ids if a!=b and route(a,b) is None]

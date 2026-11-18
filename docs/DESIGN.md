@@ -106,3 +106,15 @@ The guide was first built from Brewall's maps and later moved to Good's, because
 * Floors moved by a few units (pit -483, cross -430, ground 0, annex -5, vaults -70, gardens -35, sky +470). Floor +179 is a raised platform folded into +172.
 * Room set changed: Good's has Medical Chamber, Feeding Chamber, Analysis Room, three generators and a separate study; it has no Observation Deck, no "Crasis Whesar" room, and only one Anetarx Extraction Lab.
 * The old Brewall output was not byte-comparable, so `routes.json` was regenerated from scratch.
+
+## Rooms and corridors by hand (floors with several rooms)
+
+Where a floor holds several rooms joined by corridors (Arx Mentis +80 Anetarx and +172 Penutarx, three rooms each), straight lines between room labels cross walls and say little. Instead the zone config divides the floor:
+
+* `CORRIDORS` lists corridor pieces as extra "places" (kind `corridor`) with an anchor on the corridor's centre line. A T-junction is its own piece, so a route can say which way to leave it and the third branch isn't swallowed by the corridor between the other two.
+* `FLOOR_GRAPHS[level]["edges"]` joins neighbours: `(A, B, [via points])`. The walk goes from A's anchor through the via points (doors, corners) to B's anchor, and the compass legs come from that polyline. Ramp ends attach to the nearest piece, or per `attach` when the nearest isn't the right one.
+* Consecutive hops are merged into one step ("Head E 30 → S 20 … to the Armory, via Study NE corridor, East corridor …").
+* Corridors are selectable as start/destination and searchable (kind "corridor"), numbered on the floor plan, and left out of the diagram chips and the cheat-sheet matrix to keep them readable.
+* Points that sit inside a room (Keeper of the Matrix, Analysis Room, Medical Chamber, Third Generator) are searchable points that resolve to the room, not rooms.
+
+The division is a reading of the outlines made with zoomed plots (`/tmp`-style scripts that draw one floor's lines with the label points, ramp ends and a 10-unit grid). Check it the same way after changing it. Other floors still use plain straight lines; to divide one, add its corridors and a `FLOOR_GRAPHS` entry.

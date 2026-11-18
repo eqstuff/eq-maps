@@ -8,7 +8,8 @@ E=html.escape
 ROOMS=R.ROOMS; ids=[r['id'] for r in ROOMS]
 ORDER=sorted(ids,key=lambda i:(-ROOMS[i]['lv'] if False else 0))
 # order rooms top floor to bottom, then name
-order=sorted(ids,key=lambda i:(-ROOMS[i]['lv'],ROOMS[i]['name']))
+order_all=sorted(ids,key=lambda i:(-ROOMS[i]['lv'],ROOMS[i]['name']))
+order=[i for i in order_all if ROOMS[i].get('kind')=='room']   # matrix and sheets: rooms only
 def waycmd(x,y,z):
     """A copyable /way command; /way takes the same order as /loc prints: Y, X, Z."""
     return f'<code class="way" title="Click to copy, then paste in the chat window to set a waypoint">/way {round(-y)}, {round(-x)}, {round(z)}</code>'
@@ -28,10 +29,11 @@ def rtxt(a,b):
                 firstwalk=False
             else: head="Then head"
             if s['toR']:
-                tail=f"to <b>{E(B)}</b>"+(" <span class='sub'>(its outline is closed on the map: walk up to its walls and look for the door)</span>" if s['sealed'] else "")
+                tail=f"to <b>{E(s['to'])}</b>"+(" <span class='sub'>(its outline is closed on the map: walk up to its walls and look for the door)</span>" if s['sealed'] else "")
             else:
                 sid=s['to'].split()[1]; tail=f"to the <span class='chip'>{sid}</span> link <span class='sub'>({waycmd(s['xy'][0],s['xy'][1],s['lv'])})</span>"
-            out.append(f"<li>{head}: {legs(s['legs'])} {tail}</li>")
+            vtxt=f" <span class='sub'>via {', '.join(E(x) for x in s['via'])}</span>" if s.get('via') else ''
+            out.append(f"<li>{head}: {legs(s['legs'])} {tail}{vtxt}</li>")
         elif s['k']=='portal':
             out.append(f"<li><span class='chip'>{s['id']}</span> ✦ use the <b>teleport</b> to <b>{R.zl(s['to'])}</b> ({E(s['toname'])})</li>")
         else:
@@ -104,13 +106,13 @@ table.key{border-collapse:collapse;width:100%;background:var(--card);border:1px 
 """
 _here=os.path.dirname(os.path.abspath(__file__))
 CSS+=open(os.path.join(_here,'combobox.css')).read()
-_ent=[dict(text=ROOMS[i]['name'],sub=R.zl(ROOMS[i]['lv']),kind="room",code=str(i)) for i in order]
+_ent=[dict(text=ROOMS[i]['name'],sub=R.zl(ROOMS[i]['lv']),kind=ROOMS[i].get('kind','room'),code=str(i)) for i in order_all]
 for lp_ in R.label_points():
-    if lp_['room'] is None or lp_['room'] not in order: continue
+    if lp_['room'] is None: continue
     rn=ROOMS[lp_['room']]['name']
     _ent.append(dict(text=lp_['text'],sub="in "+rn,kind=lp_['kind'],code=str(lp_['room']),note="<b>%s</b> is in <b>%s</b>."%(E(lp_['text']),E(rn))))
 COMBO_JS=open(os.path.join(_here,'combobox.js')).read()
-opts="".join(f"<option value='{i}'>{R.zl(ROOMS[i]['lv'])}  {E(ROOMS[i]['name'])}</option>" for i in order)
+opts="".join(f"<option value='{i}'>{R.zl(ROOMS[i]['lv'])}  {E(ROOMS[i]['name'])}</option>" for i in order_all)
 JS="""
 const D=%s;
 const f=document.getElementById('from'),t=document.getElementById('to'),out=document.getElementById('out');
@@ -128,7 +130,7 @@ document.addEventListener('click',e=>{const w=e.target.closest('.way');if(!w)ret
 JS+=("""
 const ENT=__ENT__;
 __COMBO__
-const lbl=v=>{const e=ENT.find(x=>x.kind==='room'&&x.code===v);return e?e.text:''};
+const lbl=v=>{const e=ENT.find(x=>(x.kind==='room'||x.kind==='corridor')&&x.code===v);return e?e.text:''};
 const cf=makeCombo(f,ENT,{labelFor:lbl,placeholder:'Type a room or NPC…'}),ct=makeCombo(t,ENT,{labelFor:lbl,placeholder:'Type a room or NPC…'});
 const _show=show;
 show=function(){_show();cf.sync();ct.sync();
