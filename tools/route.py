@@ -21,7 +21,7 @@ ROOMS=[]
 for p in M.labs:
     t=p['t']
     if not Z.is_room_label(t): continue
-    ROOMS.append(dict(name=t,x=p['x'],y=p['y'],lv=Z.label_level(p['z'],M.lvl)))
+    ROOMS.append(dict(name=(Z.room_name(t) if hasattr(Z,'room_name') else t),x=p['x'],y=p['y'],lv=(Z.room_level(t,p['z'],M.lvl) if hasattr(Z,'room_level') else Z.label_level(p['z'],M.lvl))))
 # labels that appear more than once get a floor suffix
 _cnt=collections.Counter(r_['name'] for r_ in ROOMS)
 for r_ in ROOMS:
@@ -89,7 +89,13 @@ def snap(G,x,y):
     r,cc=idx[0][c],idx[1][c]
     return (int(r),int(cc)),float(d[c])
 MAINL=Z.GRID_LEVELS
-for lv in MAINL+Z.EXTRA_GRID_LEVELS: build_grid(lv)
+# Some maps (Good's) draw outlines with gaps, so a flood-filled walkable grid breaks up.  With
+# STRAIGHT_ROUTES the zone says: skip grids, treat each floor as open ground and give straight-line
+# compass headings between points.  Honest about it in the page text (see ROUTES_LIMITS_NOTE).
+STRAIGHT=getattr(Z,'STRAIGHT_ROUTES',False)
+if not STRAIGHT:
+    for lv in MAINL+Z.EXTRA_GRID_LEVELS: build_grid(lv)
+FLOORS=set(MAINL)|set(Z.EXTRA_GRID_LEVELS)
 # nodes on floors
 nodes={}   # key -> (lv,cell)
 for r in ROOMS: nodes[('r',r['id'])]=(r['lv'],r['x'],r['y'])
@@ -98,11 +104,12 @@ for g in STAIRS:
     for i,h_ in enumerate(g['heads']): nodes[('s',g['id'],g['hi'],'h%d'%i)]=(g['hi'],h_[0],h_[1])
 snapped={};bad=[]
 for k,(lv,x,y) in nodes.items():
+    if STRAIGHT: break
     c,d=snap(grids[lv],x,y); snapped[k]=c
     if d>25: bad.append((k,lv,round(d)))
 print("far-snap nodes:",bad)
 SEALED={}
-for lv in MAINL+Z.EXTRA_GRID_LEVELS:
+for lv in ([] if STRAIGHT else MAINL+Z.EXTRA_GRID_LEVELS):
     Gd=grids[lv]; lab,n=ndimage.label(Gd.walk,np.ones((3,3)))
     sizes=ndimage.sum(Gd.walk,lab,range(1,n+1)); big=int(np.argmax(sizes))+1
     for k in list(snapped):
@@ -134,6 +141,14 @@ fl=collections.defaultdict(list)
 for k,(lv,x,y) in nodes.items(): fl[lv].append(k)
 within={}
 for lv,ks in fl.items():
+    if STRAIGHT:
+        for a in ks:
+            for b in ks:
+                if a==b: continue
+                dx=nodes[b][1]-nodes[a][1]; dy=nodes[b][2]-nodes[a][2]; d=math.hypot(dx,dy)
+                within[(a,b)]=(d,[(hd(dx,dy),max(10,int(round(d/10.0))*10))] if d>=14 else [])
+                G.add_edge(a,b,weight=d+1)
+        continue
     Gd=grids[lv]; cost=np.where(Gd.walk,1.0,np.inf)
     for a in ks:
         mcp=MCP_Geometric(cost,fully_connected=True)
@@ -161,7 +176,8 @@ _room_cost={}
 def nearest_room(x,y,lv):
     """Room (id) on floor lv that a point at (x,y) is 'in': least walking distance, else nearest by straight line."""
     rs=[r_ for r_ in ROOMS if r_['lv']==lv]
-    if not rs or lv not in grids: return None
+    if not rs or lv not in FLOORS: return None
+    if STRAIGHT: return min(rs,key=lambda r_:math.dist((x,y),(r_['x'],r_['y'])))['id']
     Gd=grids[lv]; c,_=snap(Gd,x,y); best=None
     for r_ in rs:
         if r_['id'] not in _room_cost:
@@ -172,21 +188,21 @@ def nearest_room(x,y,lv):
     if best is None: best=min((math.dist((x,y),(r_['x'],r_['y'])),r_['id']) for r_ in rs)
     return best[1]
 def label_points():
-    """Searchable non-room labels (NPCs, merchants, hunters, ground spawns) with the room they are in."""
+    """Searchable non-room labels (NPCs, zone lines, ...) with the room they are in."""
     out=[]
     for p in M.labs:
         t=p['t']
-        if t.startswith('to #') or Z.is_room_label(t): continue
+        if Z.is_room_label(t): continue
+        kind=Z.label_kind(t)
+        if kind is None: continue
         lv=Z.label_level(p['z'],M.lvl)
-        if lv is None or lv not in grids: continue
-        kind='ground spawn' if t.startswith('GS:') else ('hunter' if '(Hunter' in t else 'NPC')
-        text=(t[3:] if t.startswith('GS:') else t).strip()
-        text+=')'*(text.count('(')-text.count(')'))
+        if lv is None or lv not in FLOORS: continue
+        text=Z.label_text(t)
         out.append(dict(text=text,kind=kind,lv=lv,room=nearest_room(p['x'],p['y'],lv)))
     for e in getattr(Z,'EXTRA_POINTS',[]):
         wy,wx,wz=e['way']; x,y=-wx,-wy          # /way Y, X, Z  ->  map x=-X, y=-Y
         lv=Z.label_level(wz,M.lvl)
-        if lv is None or lv not in grids: continue
+        if lv is None or lv not in FLOORS: continue
         out.append(dict(text=e['name'],kind=e['kind'],lv=lv,room=nearest_room(x,y,lv)))
     return out
 def fmt(legs): return ", then ".join("%s %d"%(h,l) for h,l in legs) or "a few steps"

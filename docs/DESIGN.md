@@ -95,3 +95,14 @@ For the interactive guide, endpoints can be a whole *floor* instead of a room: a
 The From/To `<select>`s stay in the page as hidden state holders; `tools/combobox.js` (+ `combobox.css`) layers a type-ahead input on top of each. Entries are floors, rooms, and every non-room point label (NPCs, hunters, ground spawns). Typing filters by accent-insensitive substring over all words; start-of-word matches rank first. Choosing an entry sets the select's value and fires `change`, so the existing render logic is unchanged.
 
 An NPC entry resolves to the room it stands in: `route.label_points()` takes each label's (x, y, floor) and `route.nearest_room()` picks the room with the least *walking* distance on that floor (straight-line fallback). If a floor has no named rooms the entry selects the whole floor. The page shows a note ("X is in Y") above the route. These labels are only as accurate as Brewall's map placement, and mobs that wander or respawn elsewhere will be wrong.
+
+## Source switch: Brewall → Good's
+
+The guide was first built from Brewall's maps and later moved to Good's, because Good's labels zone lines and portals (Brewall's has none). Good's geometry differs enough that the pipeline changed:
+
+* A ramp is one or two long sloped lines (223 sloped segments vs Brewall's 488 rail pairs), ending short of the floor heights. Ends are matched to floors with `STAIR_TOL` and tie-broken by nearest floor geometry.
+* Outlines have gaps, so the flood-filled walkable grid fell apart into corridor fragments (many rooms "sealed", floors disconnected). The zone now runs in **straight-line mode**: each hop is a compass heading and distance, with no wall avoidance. The graph only needs to know which places connect; whether a link is stairs or a ramp isn't distinguished in the text.
+* All label layers (`_1`, `_2`, `_3`, and `P` lines in the main file) are read.
+* Floors moved by a few units (pit -483, cross -430, ground 0, annex -5, vaults -70, gardens -35, sky +470). Floor +179 is a raised platform folded into +172.
+* Room set changed: Good's has Medical Chamber, Feeding Chamber, Analysis Room, three generators and a separate study; it has no Observation Deck, no "Crasis Whesar" room, and only one Anetarx Extraction Lab.
+* The old Brewall output was not byte-comparable, so `routes.json` was regenerated from scratch.

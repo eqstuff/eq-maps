@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Fetch Brewall's maps into data/brewall-maps (gitignored).
+# Fetch Good's maps (Goodurden, via RedGuides) into data/goodurden-maps (gitignored).
 set -euo pipefail
 cd "$(dirname "$0")/.."
-if [ -d data/brewall-maps/.git ]; then
-  git -C data/brewall-maps pull --ff-only
+if [ -d data/goodurden-maps/.git ]; then
+  git -C data/goodurden-maps pull --ff-only
 else
   mkdir -p data
-  git clone --depth 1 https://github.com/RedGuides/brewall-maps data/brewall-maps
+  GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 https://github.com/RedGuides/goodurden-maps data/goodurden-maps
 fi
-git -C data/brewall-maps rev-parse --short HEAD
+git -C data/goodurden-maps rev-parse --short HEAD

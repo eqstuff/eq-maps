@@ -15,7 +15,7 @@ The first zone done is **Arx Mentis** (13 floor heights, 23 staircases/ramps, 21
 
 ```bash
 pip install -r tools/requirements.txt
-tools/fetch_maps.sh                 # clones Brewall's maps into data/ (gitignored)
+tools/fetch_maps.sh                 # clones Good's maps into data/ (gitignored)
 ./build.sh arxmentis                # writes site/arxmentis/{index.html,routes.json,cheatsheet.html}
 python3 -m http.server -d site 8000 # open http://localhost:8000/
 ```
@@ -42,7 +42,7 @@ tools/
   fetch_maps.sh             get the source maps
 docs/
   DESIGN.md                 the idea, goals, architecture, algorithms, decisions
-  MAP_FORMAT.md             Brewall map file format and coordinate conventions
+  MAP_FORMAT.md             Map file format (Good's and Brewall's) and coordinate conventions
   ADAPTING.md               checklist for mapping another zone
   LESSONS.md                what went wrong while building it, and the fixes
 site/                       built output (what GitHub Pages serves)
@@ -59,4 +59,4 @@ The code, docs and generated pages in this repository are released under the [BS
 
 ## Credits and caveats
 
-Map data is from [Brewall's maps](https://github.com/RedGuides/brewall-maps) (RedGuides); it is not redistributed here. This is an unofficial derived guide. Compass headings and `/loc` values are computed from the map file and have **not** been verified in the game client; see `docs/MAP_FORMAT.md` and spot-check one stair with `/loc` before trusting them. EverQuest is a trademark of its owners; this project is not affiliated with them.
+Map data is from [Good's maps](https://github.com/RedGuides/goodurden-maps) (Goodurden, via RedGuides); it is not redistributed here. This is an unofficial derived guide. Compass headings and `/loc` values are computed from the map file and have **not** been verified in the game client; see `docs/MAP_FORMAT.md` and spot-check one stair with `/loc` before trusting them. EverQuest is a trademark of its owners; this project is not affiliated with them.

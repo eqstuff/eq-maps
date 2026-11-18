@@ -24,13 +24,13 @@ def rtxt(a,b):
         if s['k']=='walk':
             if firstwalk:
                 h=s['legs'][0][0] if s['legs'] else '–'; first=h
-                head=f"Leave <b>{E(A)}</b> heading <b class='dir'>{h}</b>"
+                head=(f"Leave <b>{E(A)}</b> heading <b class='dir'>{h}</b>" if s['legs'] else f"Leave <b>{E(A)}</b>")
                 firstwalk=False
             else: head="Then head"
             if s['toR']:
                 tail=f"to <b>{E(B)}</b>"+(" <span class='sub'>(its outline is closed on the map: walk up to its walls and look for the door)</span>" if s['sealed'] else "")
             else:
-                sid=s['to'].split()[1]; tail=f"to the <span class='chip'>{sid}</span> stairs <span class='sub'>({waycmd(s['xy'][0],s['xy'][1],s['lv'])})</span>"
+                sid=s['to'].split()[1]; tail=f"to the <span class='chip'>{sid}</span> link <span class='sub'>({waycmd(s['xy'][0],s['xy'][1],s['lv'])})</span>"
             out.append(f"<li>{head}: {legs(s['legs'])} {tail}</li>")
         elif s['k']=='portal':
             out.append(f"<li><span class='chip'>{s['id']}</span> ✦ use the <b>teleport</b> to <b>{R.zl(s['to'])}</b> ({E(s['toname'])})</li>")
@@ -144,7 +144,7 @@ page=f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="
 <h2 id="picker">Route finder</h2>
 <div class="card"><div class="pick"><label>From<select id="from">{opts}</select></label><button id="swap" title="Swap">⇄</button><label>To<select id="to">{opts}</select></label></div><div id="out"></div></div>
 <h2>Matrix</h2>
-<p class="sub">Rows are where you start, columns where you’re going. Each cell shows the direction to head out of the starting room, then ▲ stairs up / ▼ stairs down on the way. Tap a cell for the full route. Colour is rough distance: <span class="legend"><span class="b0">short</span><span class="b1">medium</span><span class="b2">long</span><span class="b3">very long</span></span></p>
+<p class="sub">Rows are where you start, columns where you’re going. Each cell shows the direction to head out of the starting room, then ▲ up / ▼ down on the way. Tap a cell for the full route. Colour is rough distance: <span class="legend"><span class="b0">short</span><span class="b1">medium</span><span class="b2">long</span><span class="b3">very long</span></span></p>
 {matrix}
 <h2>Cheat sheet by starting room</h2>
 <p class="sub">Open a room, then tap a destination for the full steps.</p>

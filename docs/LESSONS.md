@@ -42,3 +42,10 @@ Things that went wrong while building the Arx Mentis guide, and what fixed them.
 * A helper named `way()` clashed with a loop variable `way="up"` in `build_guide.py` ("'str' object is not callable"). The helper is now `waycmd()`; avoid generic names in the big top-level build scripts.
 * Adding the T1 portal connected the pit and teleport cross to the tower: 240 new route pairs, and no existing route changed (checked by comparing the `s`/`f` fields of every key in `routes.json` before and after).
 * The diagram's room chips, thumbnails and "leave" pills all share the box width: thumbnails take the left ~100 px, the "leave" pills the right ~100 px, chips wrap in between.
+
+## Moving to Good's maps (traps)
+
+* **Don't assume closed outlines.** The exterior flood fill that worked on Brewall leaks through Good's gaps and leaves corridor fragments. Look at `tools/debug_grids.py` output before trusting a grid; fall back to `STRAIGHT_ROUTES`.
+* **Ramp ends are imprecise.** A ramp drawn from -29 to -5 next to a floor at 0 belongs to the 0 floor. Resolve by nearest floor walls, not just nearest Z.
+* **Labels can float on the wrong Z.** Check each room's floor after a source change (gardens label at -3.7).
+* **Name-based lookups break on rename.** The teleport link was keyed by a room called "Teleport" that only existed in Brewall's labels; the portal silently vanished and the pit became unreachable. The route builder now reports unreachable pairs: run `python3 -I tools/route.py` after any config change.

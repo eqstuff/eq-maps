@@ -117,7 +117,7 @@ def thumb(lv,yy,h):
 for lv in ORDER:
     bx=BOX[lv];yy=bx['y']
     cls='box faint' if lv in Z.MINOR_LEVELS else 'box'
-    sub=' no labels, no stairs found' if (not chipsof[lv] and not byl.get(lv)) else ''
+    sub=' no labels, no links found' if (not chipsof[lv] and not byl.get(lv)) else ''
     o=[f'<g class="bx" data-lv="{lv}"><rect class="{cls}" x="{x0}" y="{yy}" width="{boxw}" height="{bx["h"]}" rx="8"/>'
        f'<text class="zt" x="{x0+LEFT}" y="{yy+23}">{zl(lv)}</text><text class="nt" x="{x0+LEFT+52}" y="{yy+23}">{E(NAMES[lv])}</text>'+(f'<text class="st" x="{x0+LEFT+52}" y="{yy+42}">{sub}</text>' if sub else '')+thumb(lv,yy,bx["h"])]
     for r_,cx,line,w in chipsof[lv]:
@@ -137,7 +137,7 @@ def legs_txt(l): return " → ".join("<b>%s</b> %d"%(h,d) for h,d in l) if l els
 def route_entry(sk,dk):
     la,lb=lvl_of(sk),lvl_of(dk)
     if sk[0]=='f' or dk[0]=='f':
-        if la==lb: return dict(h="<p class='sub'>Both are on the same floor, so no stairs are needed.</p>",s=[],f=[la])
+        if la==lb: return dict(h="<p class='sub'>Both are on the same floor, so no ramps or stairs are needed.</p>",s=[],f=[la])
     tmp=[]
     def add(k):
         if k[0]=='f':
@@ -171,17 +171,17 @@ def route_entry(sk,dk):
             up=v[2]>u[2]
             stairs.append(dict(id=u[1],dir='up' if up else 'down',fr=u[2],to=v[2],exit=pend))
             floors.append(v[2])
-            h.append(f"<li><span class='chip'>{u[1]}</span> {'▲ up' if up else '▼ down'} the stairs to <b>{zl(v[2])}</b> ({E(NAMES[v[2]])})</li>")
+            h.append(f"<li><span class='chip'>{u[1]}</span> {'▲ up' if up else '▼ down'} to <b>{zl(v[2])}</b> ({E(NAMES[v[2]])})</li>")
             pend=''
         else:
             d_,legs=R.within[(u,v)]
             hd=legs[0][0] if legs else ''
-            if first and u[0]=='r': head=f"Leave <b>{E(R.ROOMS[u[1]]['name'])}</b> heading <b class='dir'>{hd} {dirglyph(hd)}</b>"
+            if first and u[0]=='r': head=(f"Leave <b>{E(R.ROOMS[u[1]]['name'])}</b> heading <b class='dir'>{hd} {dirglyph(hd)}</b>" if hd else f"Leave <b>{E(R.ROOMS[u[1]]['name'])}</b>")
             else: head=f"Head <b class='dir'>{hd} {dirglyph(hd)}</b>" if hd else "Head"
             first=False
             if v[0]=='r': tail=f"to <b>{E(R.ROOMS[v[1]]['name'])}</b>"+(" <span class='sub'>(closed outline on the map: walk up to its walls and look for the door)</span>" if v in R.SEALED else "")
             else:
-                n_=R.nodes[v]; tail=f"to the <span class='chip'>{v[1]}</span> stairs <span class='sub'>({waycmd(n_[1],n_[2],n_[0])})</span>"
+                n_=R.nodes[v]; tail=f"to the <span class='chip'>{v[1]}</span> link <span class='sub'>({waycmd(n_[1],n_[2],n_[0])})</span>"
             h.append(f"<li>{head}: {legs_txt(legs)} {tail}</li>")
             pend=hd
     h.append(f"<li class='done'>Arrive at <b>{E(B_) if B_ else zl(lb)+' '+E(NAMES[lb])}</b>.</li>")
@@ -360,7 +360,7 @@ page=f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="
 <h1>{E(Z.TITLE)}</h1>
 <p class="lead">{Z.intro(len(st))}</p>
 <h2 id="connections">What connects to what</h2>
-<p class="sub">Click a floor box (or a room inside it) to set the <b style="color:#16a34a">start</b>, then click another for the <b style="color:#dc2626">destination</b>. The stairs you need light up, everything else fades, and the steps appear alongside. A third click starts over.</p>
+<p class="sub">Click a floor box (or a room inside it) to set the <b style="color:#16a34a">start</b>, then click another for the <b style="color:#dc2626">destination</b>. The links you need light up, everything else fades, and the steps appear alongside. A third click starts over.</p>
 <div class="ctl"><label>From<select id="selA"></select></label><button id="swap" title="Swap start and destination">⇄ Swap</button><label>To<select id="selB"></select></label><button id="clr">Clear</button></div>
 <div class="dgrid"><div class="diagwrap">{diagram}</div><aside class="panel" id="panel"><p class="sub">Pick a start and a destination to see the route here.</p></aside></div>
 <p class="sub">Heights are map Z values, top is highest. Each numbered circle is a staircase or ramp (S1–S{len(st)}); its line runs between the two floors it joins. Dashed boxes are minor landings. Black “leave” badges on the highlighted route show which way to head out of that floor toward the next stairs.</p>

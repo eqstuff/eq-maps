@@ -11,13 +11,33 @@ def load():
     for ln in open(os.path.join(D,Z.FILE_PREFIX+'.txt')):
         if ln[:1]=='L':
             p=[x.strip() for x in ln[2:].split(',')]; L.append([float(x) for x in p[:6]])
-    for ln in open(os.path.join(D,Z.FILE_PREFIX+'_1.txt')):
-        if ln[:1]=='P':
-            p=[x.strip() for x in ln[2:].split(',')]; P.append((float(p[0]),float(p[1]),float(p[2]),p[7]))
+    import glob,re
+    files=[os.path.join(D,Z.FILE_PREFIX+'.txt')]+sorted(glob.glob(os.path.join(D,Z.FILE_PREFIX+'_[0-9]*.txt')))
+    for fn in files:                      # P records may be in the geometry file and in every _N layer
+        for ln in open(fn,encoding='utf-8',errors='replace'):
+            if ln[:1]=='P':
+                p=[x.strip() for x in ln[2:].split(',')]; P.append((float(p[0]),float(p[1]),float(p[2]),','.join(p[7:])))
     return L,P
 L,P=load()
 flat=[l for l in L if abs(l[2]-l[5])<.5]
 slope=[l for l in L if abs(l[2]-l[5])>=.5]
+# floor geometry per level, used to decide which floor a ramp end belongs to
+_flatpts=collections.defaultdict(list)
+for _l in flat:
+    _lv=Z.flat_level((_l[2]+_l[5])/2,lvl)
+    if _lv is not None: _flatpts[_lv]+=[(_l[0],_l[1]),(_l[3],_l[4])]
+def _end_level(z,pts,tol):
+    """Floor that one end of a sloped cluster reaches.  Candidates are the levels within `tol` of z
+    (plus whatever the zone's flat_level rule says, e.g. cave heights); when several fit, the one whose
+    walls are nearest the end's x,y wins (a ramp ending at -5 next to the 0 floor belongs to 0)."""
+    cand={n[0] for n in NOM if abs(n[0]-z)<=tol}
+    c=Z.flat_level(z,lambda zz,t=tol:lvl(zz,t))
+    if c is not None: cand.add(c)
+    if not cand: return None
+    if len(cand)==1: return next(iter(cand))
+    cx=sum(p[0] for p in pts)/len(pts); cy=sum(p[1] for p in pts)/len(pts)
+    def d(n): return min((math.dist((cx,cy),q) for q in _flatpts.get(n,[(1e9,1e9)])),default=1e9)
+    return min(cand,key=d)
 # slope clusters
 par=list(range(len(slope)))
 def f(i):
@@ -33,9 +53,10 @@ C=[]
 for ls in cl.values():
     zs=[l[2] for l in ls]+[l[5] for l in ls]
     zlo,zhi=min(zs),max(zs)
-    lo,hi=lvl(zlo),lvl(zhi)
+    tol=getattr(Z,'STAIR_TOL',4.5)
     pts=[(l[0],l[1],l[2]) for l in ls]+[(l[3],l[4],l[5]) for l in ls]
     foot=[p for p in pts if p[2]<zlo+1.5]; head=[p for p in pts if p[2]>zhi-1.5]
+    lo=_end_level(zlo,foot,tol); hi=_end_level(zhi,head,tol)
     xs=[p[0] for p in pts]; ys=[p[1] for p in pts]
     C.append(dict(zlo=zlo,zhi=zhi,lo=lo,hi=hi,segs=ls,bbox=[min(xs),min(ys),max(xs),max(ys)],
         foot=(sum(p[0] for p in foot)/len(foot),sum(p[1] for p in foot)/len(foot)),

@@ -1,6 +1,6 @@
 # Working on eq-maps
 
-Generates interactive guides for multi-level EverQuest zones from Brewall's map files. Read `README.md`, then `docs/DESIGN.md`; `docs/LESSONS.md` lists the traps.
+Generates interactive guides for multi-level EverQuest zones from Good's map files (Goodurden, via RedGuides). Read `README.md`, then `docs/DESIGN.md`; `docs/LESSONS.md` lists the traps.
 
 * Build: `MAP_DIR=<maps dir> ./build.sh <zone>` (needs numpy, scipy, scikit-image, networkx). Output goes to `site/<zone>/`; commit it.
 * All zone-specific knowledge belongs in `tools/zones/<zone>.py`. Don't hard-code floor heights or names in the generic tools.

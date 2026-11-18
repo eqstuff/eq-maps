@@ -41,3 +41,12 @@ The generated pages print locations as `/way Y, X, Z` commands (for example `/wa
 ## What the file does NOT contain
 
 Doors (a doorway is just a gap in an outline), zone lines, teleport destinations, elevators and any notion of rooms (rooms are only inferred from labels). Anything in the generated pages that says "walk through here" assumes gaps are doorways.
+
+## Good's maps (RedGuides/goodurden-maps, folder `Good's Maps/`)
+
+Same `L`/`P` records and the same coordinate frame as Brewall's (rooms line up within ~20 units), with differences:
+
+* Decimal coordinates and spaces after commas; labels use `_` and may be truncated mid-parenthesis (`Firiona_Vie(Q`). A label can contain commas, so join fields 8+.
+* Labels are spread over `<zone>_1.txt`, `_2.txt`, `_3.txt` and a few sit in `<zone>.txt` itself. `_2` holds room names, generators, portals and the legend-like entries (there is no far-away key).
+* Colour carries meaning (blue = non-aggro NPC, etc.; see the RedGuides page's key). `(Q)`, `(M)`, `GS` mark quests, merchants and ground spawns.
+* Zone lines and portals appear as `to_<Zone>` and `portal` / `Portal_out` labels. There is no safe-spot label.
