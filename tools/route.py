@@ -28,7 +28,7 @@ for r_ in ROOMS:
     if _cnt[r_['name']]>1: r_['name']='%s (%s)'%(r_['name'],zl(r_['lv']))
 for name,x,y,lv in Z.EXTRA_ROOMS: ROOMS.append(dict(name=name,x=x,y=y,lv=lv))
 for r_ in ROOMS: r_['kind']='room'
-for name,x,y,lv in getattr(Z,'CORRIDORS',[]): ROOMS.append(dict(name=name,x=x,y=y,lv=lv,kind='corridor'))
+for name,x,y,lv in getattr(Z,'CORRIDORS',[]): ROOMS.append(dict(name=name,x=x,y=y,lv=lv,kind='corridor',group=getattr(Z,'CORRIDOR_GROUPS',{}).get(name,name)))
 for i,r in enumerate(ROOMS): r['id']=i
 STAIRS=M.groups
 # ----- grids
@@ -255,6 +255,28 @@ def merge_legs(a,b):
         if out and out[-1][0]==h: out[-1][1]+=l
         else: out.append([h,l])
     return [(h,l) for h,l in out]
+def feature_of(v):
+    """What a walking hop arrives at: a room, a ramp end, or a corridor feature. None = a corridor piece that is
+    just part of a room's exit (it belongs in the same step as the next hop)."""
+    if v[0]!='r': return ('s',v)
+    r_=ROOMS[v[1]]
+    if r_['kind']=='room': return ('r',v[1])
+    if any(q['kind']=='room' and q['name']==r_['group'] and q['lv']==r_['lv'] for q in ROOMS): return None
+    return ('c',r_['lv'],r_['group'])
+def chunk_hops(hops):
+    """Split a run of walking hops (u,v) into steps: one per room, ramp end or corridor feature reached."""
+    out=[];cur=[]
+    for i,(u,v) in enumerate(hops):
+        cur.append((u,v)); f=feature_of(v)
+        if f is None: continue
+        nxt=feature_of(hops[i+1][1]) if i+1<len(hops) else 'END'
+        if f[0]=='c' and nxt==f: continue
+        out.append(cur);cur=[]
+    if cur: out.append(cur)
+    return out
+def target_name(v):
+    if v[0]=='s': return 'stairs '+v[1]
+    r_=ROOMS[v[1]]; return r_['name'] if r_['kind']=='room' else r_['group']
 def fmt(legs): return ", then ".join("%s %d"%(h,l) for h,l in legs) or "a few steps"
 def route(a,b):
     ka,kb=('r',a),('r',b)
@@ -276,14 +298,20 @@ def route(a,b):
         else:
             d,legs=within[(u,v)]; dist+=d
             tgt=('stairs '+v[1]) if v[0]=='s' else ri[v[1]]['name']
-            steps.append(dict(k='walk',legs=legs,to=tgt,lv=nodes[u][0],toR=(v[0]=='r'),fromR=(u[0]=='r'),xy=(nodes[v][1],nodes[v][2]),sealed=(v in SEALED)))
+            steps.append(dict(k='walk',uv=(u,v),legs=legs,to=tgt,lv=nodes[u][0],toR=(v[0]=='r'),fromR=(u[0]=='r'),xy=(nodes[v][1],nodes[v][2]),sealed=(v in SEALED)))
         i+=1
-    merged=[]
-    for s in steps:      # consecutive walking hops (room -> corridor -> junction -> room) read as one walk
-        if merged and s['k']=='walk' and merged[-1]['k']=='walk':
-            m=merged[-1]; m['via']=m.get('via',[])+[m['to']]
-            m['legs']=merge_legs(m['legs'],s['legs']); m['to']=s['to']; m['toR']=s['toR']; m['xy']=s['xy']; m['sealed']=s['sealed']
-        else: merged.append(s)
+    merged=[];run=[]
+    def flush_run():
+        for ch in chunk_hops([(s_['uv'][0],s_['uv'][1]) for s_ in run]):
+            ss=[s_ for s_ in run if s_['uv'] in ch]
+            legs=[]
+            for s_ in ss: legs=merge_legs(legs,s_['legs'])
+            l=ss[-1]; merged.append(dict(k='walk',legs=legs,to=target_name(l['uv'][1]),lv=ss[0]['lv'],toR=l['toR'],fromR=ss[0]['fromR'],xy=l['xy'],sealed=l['sealed']))
+        run.clear()
+    for s in steps:
+        if s['k']=='walk': run.append(s)
+        else: flush_run(); merged.append(s)
+    flush_run()
     return dict(steps=merged,dist=int(dist),stairs=nst)
 if __name__=="__main__":
     ids=[r['id'] for r in ROOMS]

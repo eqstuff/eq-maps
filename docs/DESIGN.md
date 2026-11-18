@@ -107,15 +107,16 @@ The guide was first built from Brewall's maps and later moved to Good's, because
 * Room set changed: Good's has Medical Chamber, Feeding Chamber, Analysis Room, three generators and a separate study; it has no Observation Deck, no "Crasis Whesar" room, and only one Anetarx Extraction Lab.
 * The old Brewall output was not byte-comparable, so `routes.json` was regenerated from scratch.
 
-## Rooms and corridors by hand (floors with several rooms)
+## Dividing a floor into rooms and corridors (recipe for any floor or zone)
 
-Where a floor holds several rooms joined by corridors (Arx Mentis +80 Anetarx and +172 Penutarx, three rooms each), straight lines between room labels cross walls and say little. Instead the zone config divides the floor:
+Where a floor holds several rooms joined by corridors (Arx Mentis +80 Anetarx and +172 Penutarx), straight lines between room labels cross walls and say little. The generic tools do nothing zone-specific; a floor is divided entirely by data in `tools/zones/<zone>.py`:
 
-* `CORRIDORS` lists corridor pieces as extra "places" (kind `corridor`) with an anchor on the corridor's centre line. A T-junction is its own piece, so a route can say which way to leave it and the third branch isn't swallowed by the corridor between the other two.
-* `FLOOR_GRAPHS[level]["edges"]` joins neighbours: `(A, B, [via points])`. The walk goes from A's anchor through the via points (doors, corners) to B's anchor, and the compass legs come from that polyline. Ramp ends attach to the nearest piece, or per `attach` when the nearest isn't the right one.
-* Consecutive hops are merged into one step ("Head E 30 → S 20 … to the Armory, via Study NE corridor, East corridor …").
-* Corridors are internal routing only: not selectable, searchable or numbered, and absent from the cheat sheet. They appear only as "via" names inside a route's steps.
-* In the "What connects to what" diagram a divided floor is drawn as one box per room (`UNIT_ORDER` in the zone config sets their order); undivided floors stay one box. Floor cards list only rooms and links.
-* Points that sit inside a room (Keeper of the Matrix, Analysis Room, Medical Chamber, Third Generator) are searchable points that resolve to the room, not rooms.
+1. **Look.** `python3 -I tools/plot_floor.py <zone> <map dir> <level> out.png [x0 x1 y0 y1]` draws the walls with labels, ramp ends and a 10-unit grid. Read coordinates off the grid.
+2. **Pieces.** `CORRIDORS` lists corridor pieces `(name, x, y, level)`, anchors on the centre line. Cut at T-junctions and corners where a heading changes, so a leaving direction is unambiguous, but don't slice further than that.
+3. **Graph.** `FLOOR_GRAPHS[level]["edges"]` joins neighbours `(A, B, [via points])` (rooms and pieces). The walk goes through the via points (doors, corners). Ramp ends attach to the nearest piece, or per `attach`. Having a `FLOOR_GRAPHS` entry is what marks a floor as divided.
+4. **Features.** `CORRIDOR_GROUPS` maps each piece to a named corridor (the thing the user sees). A corridor with a T, or with several exits, is still one feature as long as its exits point in different compass directions; split it only when two exits would share a heading. A piece grouped under a *room's* name is just part of that room's exit.
+5. **Boxes.** `ROOM_BOX[room] = (x0, x1, y0, y1)` is the map rectangle the room's thumbnail shows (default: a 120-unit square around its label). Corridor thumbnails are cut automatically around their pieces, with the corridor's centre line drawn in colour. `UNIT_ORDER[level]` orders the boxes top to bottom. The build prints a note for any room without a box or piece without a group.
+
+What the user gets: one box per room and per corridor in "What connects to what", each listing its exits as `heading → neighbour`; routes that read room → corridor → corridor → room, one step per feature (consecutive hops inside one feature merge: `route.chunk_hops`); and corridors that are *not* selectable, searchable or in the cheat-sheet matrix.
 
 The division is a reading of the outlines made with zoomed plots (`/tmp`-style scripts that draw one floor's lines with the label points, ramp ends and a 10-unit grid). Check it the same way after changing it. Other floors still use plain straight lines; to divide one, add its corridors and a `FLOOR_GRAPHS` entry.

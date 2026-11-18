@@ -133,6 +133,29 @@ CORRIDORS = [
     ("Stasis corridor (south)", -21, 88, 172), ("Junction west corridor", 83, -20, 172),
     ("Ramp corridor", 81, 150, 172), ("Junction south corridor", 130, 95, 172),
 ]
+# Corridor pieces are grouped into a few named corridor features (shown as boxes in the guide and as
+# stops in the directions).  A piece whose group is a room's name is just part of that room's exit.
+CORRIDOR_GROUPS = {
+    "South corridor": "South corridor", "Study SE corridor": "South corridor", "South-east corridor": "South corridor",
+    "Study NE corridor": "Middle corridor", "East corridor (west)": "Middle corridor", "East T-junction": "Middle corridor",
+    "East corridor (east)": "Middle corridor", "Extraction Lab approach": "Middle corridor",
+    "Middle corridor": "North corridor", "North T-junction": "North corridor", "North corridor (west)": "North corridor",
+    "North corridor (east)": "North corridor", "North junction": "North corridor", "Cave-ramp corridor": "North corridor",
+    "Armory corridor": "North corridor",
+    "Study west corridor": "Anetarx Central Study",
+    "Ring corridor (north)": "Ring corridor", "Ring corridor (west)": "Ring corridor", "Ring corridor (south)": "Ring corridor",
+    "Ring corridor (east)": "Ring corridor", "Ward south passage": "Ring corridor",
+    "Stasis corridor (north)": "Stasis corridor", "Stasis corridor (south)": "Stasis corridor",
+    "Junction west corridor": "Junction west corridor",
+    "Ramp corridor": "Junction south corridor", "Junction south corridor": "Junction south corridor",
+}
+# Map rectangle (x0, x1, y0, y1) of each room: its thumbnail in the connections diagram shows only these lines.
+ROOM_BOX = {
+    "Anetarx Armory": (-18, 95, -257, -165), "Anetarx Central Study": (-68, 35, -86, 44),
+    "Anetarx Extraction Lab": (236, 328, -104, 26),
+    "Penutarx Reanimation Ward": (-62, 50, -132, -28), "Penutarx Stasis Lab": (-68, 48, 100, 192),
+    "Penutarx Junction": (98, 195, -42, 42),
+}
 FLOOR_GRAPHS = {
     80: dict(edges=[
         ("Anetarx Central Study", "Study west corridor", [(-57, 18)]),
@@ -190,9 +213,8 @@ EXTRA_GRID_LEVELS = [-430, -483]                                    # cut off fr
 
 # --- page text --------------------------------------------------------------
 def floor_note(lv):
-    split = ('<p class="note">This floor is split by hand into its rooms and <b>corridor pieces</b> (numbered on the plan). '
-             'Each T-junction is its own piece, so a route can say which way to leave it. The map file doesn’t mark corridors; '
-             'the split is my reading of the outlines, and routes follow the corridors between the pieces.</p>')
+    split = ('<p class="note">This floor is split by hand into its rooms and a few <b>corridors</b>. '
+             'The map file doesn’t mark corridors; the split is my reading of the outlines, and the directions follow them.</p>')
     notes = {
         80: split, 172: split,
         115: '<p class="note">This is a natural cave, so Good’s draws it with irregular sloped edges rather than clean ramps.</p>',
@@ -222,5 +244,6 @@ ROUTES_LIMITS_NOTE = ("Directions are straight-line compass headings between the
                       "experience, not from the map, and is assumed to work both ways. The +470 sky platform isn’t included.")
 
 # Order of the room boxes inside a divided floor in the connections diagram (top to bottom).
-UNIT_ORDER = {80: ["Anetarx Armory", "Anetarx Central Study", "Anetarx Extraction Lab"],
-              172: ["Penutarx Reanimation Ward", "Penutarx Stasis Lab", "Penutarx Junction"]}
+UNIT_ORDER = {80: ["Anetarx Armory", "North corridor", "Middle corridor", "Anetarx Central Study", "South corridor", "Anetarx Extraction Lab"],
+              172: ["Penutarx Reanimation Ward", "Ring corridor", "Stasis corridor", "Penutarx Stasis Lab",
+                    "Junction west corridor", "Penutarx Junction", "Junction south corridor"]}
