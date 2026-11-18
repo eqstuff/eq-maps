@@ -148,19 +148,20 @@ CORRIDOR_GROUPS = {
     "North corridor (east)": "North corridor", "North junction": "North corridor", "Cave-ramp corridor": "North corridor",
     "Armory corridor": "North corridor",
     "Study west corridor": "Anetarx Central Study",
-    "Ring corridor (north)": "Ring corridor", "Ring corridor (west)": "Ring corridor", "Ring corridor (south)": "Ring corridor",
-    "Ring corridor (east)": "Ring corridor", "Ward south passage": "Ring corridor",
+    "Ring corridor (north)": "Penutarx Reanimation Ward", "Ring corridor (west)": "Penutarx Reanimation Ward", "Ring corridor (south)": "Penutarx Reanimation Ward",
+    "Ring corridor (east)": "Penutarx Reanimation Ward", "Ward south passage": "Penutarx Reanimation Ward",
     "Lab-hub corridor (lab end)": "Protarx Infusion Lab", "Lab-hub corridor (hub end)": "Central hub (ground)",
     # corridors with a single way in and out aren't places of their own: each half belongs to the room (or corridor) it leads to
-    "Stasis corridor (north)": "Ring corridor", "Stasis corridor (south)": "Penutarx Stasis Lab",
-    "Junction west corridor (west)": "Ring corridor", "Junction west corridor (east)": "Penutarx Junction",
+    "Stasis corridor (north)": "Penutarx Reanimation Ward", "Stasis corridor (south)": "Penutarx Stasis Lab",
+    "Junction west corridor (west)": "Penutarx Reanimation Ward", "Junction west corridor (east)": "Penutarx Junction",
     "Ramp corridor": "Penutarx Junction", "Junction south corridor": "Penutarx Junction",
 }
 # Map rectangle (x0, x1, y0, y1) of each room: its thumbnail in the connections diagram shows only these lines.
 ROOM_BOX = {
     "Anetarx Armory": (-18, 95, -257, -165), "Anetarx Central Study": (-68, 35, -86, 44),
     "Anetarx Extraction Lab": (236, 328, -104, 26),
-    "Penutarx Reanimation Ward": (-62, 50, -132, -28), "Penutarx Stasis Lab": (-68, 48, 100, 192),
+    # the ward and the ring corridor around it are one place
+    "Penutarx Reanimation Ward": (-116, 72, -186, 26), "Penutarx Stasis Lab": (-68, 48, 100, 192),
     "Penutarx Junction": (98, 195, -42, 42),
     "Protarx Infusion Lab": (-255, -145, -175, 15), "Central hub (ground)": (-48, 48, -52, 52),
 }
@@ -208,7 +209,7 @@ FLOOR_GRAPHS = {
         ("Junction west corridor (east)", "Penutarx Junction", []),
         ("Ramp corridor", "Junction south corridor", [(81, 122), (130, 122)]),
         ("Junction south corridor", "Penutarx Junction", [(130, 59), (134, 45)]),
-    ], attach=[((-85, 39), "Ring corridor (south)", [(-95, 12)])]),
+    ], attach=[((-92, 39), "Penutarx Stasis Lab", [(-88, 95), (-88, 135), (-65, 135)])]),
 }
 
 # --- teleports (not in the map file) ------------------------------------------
@@ -260,5 +261,4 @@ ROUTES_LIMITS_NOTE = ("Directions are straight-line compass headings between the
 
 # Order of the room boxes inside a divided floor in the connections diagram (top to bottom).
 UNIT_ORDER = {0: ["Protarx Infusion Lab", "Central hub (ground)"], 80: ["Anetarx Armory", "North corridor", "Middle corridor", "Anetarx Central Study", "South corridor", "Anetarx Extraction Lab"],
-              172: ["Penutarx Reanimation Ward", "Ring corridor", "Stasis corridor", "Penutarx Stasis Lab",
-                    "Junction west corridor", "Penutarx Junction", "Junction south corridor"]}
+              172: ["Penutarx Reanimation Ward", "Penutarx Stasis Lab", "Penutarx Junction"]}
