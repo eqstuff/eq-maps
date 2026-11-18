@@ -183,6 +183,11 @@ def label_points():
         text=(t[3:] if t.startswith('GS:') else t).strip()
         text+=')'*(text.count('(')-text.count(')'))
         out.append(dict(text=text,kind=kind,lv=lv,room=nearest_room(p['x'],p['y'],lv)))
+    for e in getattr(Z,'EXTRA_POINTS',[]):
+        wy,wx,wz=e['way']; x,y=-wx,-wy          # /way Y, X, Z  ->  map x=-X, y=-Y
+        lv=Z.label_level(wz,M.lvl)
+        if lv is None or lv not in grids: continue
+        out.append(dict(text=e['name'],kind=e['kind'],lv=lv,room=nearest_room(x,y,lv)))
     return out
 def fmt(legs): return ", then ".join("%s %d"%(h,l) for h,l in legs) or "a few steps"
 def route(a,b):

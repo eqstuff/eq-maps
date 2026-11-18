@@ -80,6 +80,12 @@ PORTALS = [dict(id="T1", name="Teleport",
                 text="The teleport pad at the top of the pit pyramid. It is reported to land you at the "
                      "four-way crossing of the ground-floor central hub.")]
 
+# Points that are NOT in Brewall's map file (safe points, zone lines) but should be searchable.
+# Each: dict(name=..., kind='safe point'|'zone connection', way=(Y, X, Z))  - the numbers /loc prints
+# (first, second, third). Left empty on purpose: the map file has neither, and coordinates must come from
+# the game (stand there and type /loc), not be guessed.
+EXTRA_POINTS = []
+
 # --- walkable grids ---------------------------------------------------------
 GRID_LEVELS = [172, 115, 105, 85, 80, 45, 24, -1, -6, -36, -71]   # the connected tower
 EXTRA_GRID_LEVELS = [-429, -484]                                    # cut off from the tower

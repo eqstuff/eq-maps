@@ -24,3 +24,7 @@ Any Brewall zone with several levels works the same way. Budget a couple of hour
 Tuning knobs, if routes look wrong: grid resolution `RES` and the wall dilation in `route.build_grid`; stair cluster radius (4) and feet/heads radius (25) in `model.py`; leg simplification (tolerance 7, min leg 14) in `route.legs_from`; sealed-room size threshold (1500 cells) in `route.py`.
 
 A different map source (not Brewall) only needs a new parser in `model.load()`; everything after it works on `L`/`P` lists.
+
+## Extra searchable points (safe points, zone lines)
+
+Brewall's files contain neither. Add them in `tools/zones/<zone>.py` as `EXTRA_POINTS = [dict(name="Safe point", kind="safe point", way=(Y, X, Z))]` using the numbers `/loc` prints in game; they become searchable and resolve to their room like NPCs do. Don't guess coordinates.
