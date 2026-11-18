@@ -29,6 +29,14 @@ for r_ in ROOMS:
 for name,x,y,lv in Z.EXTRA_ROOMS: ROOMS.append(dict(name=name,x=x,y=y,lv=lv))
 for r_ in ROOMS: r_['kind']='room'
 for name,x,y,lv in getattr(Z,'CORRIDORS',[]): ROOMS.append(dict(name=name,x=x,y=y,lv=lv,kind='corridor',group=getattr(Z,'CORRIDOR_GROUPS',{}).get(name,name)))
+# every named corridor is also a place of its own (selectable); it stands at its most central piece
+_gr=collections.defaultdict(list)
+for r_ in ROOMS:
+    if r_['kind']=='corridor' and not any(q['kind']=='room' and q['name']==r_['group'] and q['lv']==r_['lv'] for q in ROOMS): _gr[(r_['lv'],r_['group'])].append(r_)
+for (_lv,_g),_ps in _gr.items():
+    _cx=sum(q['x'] for q in _ps)/len(_ps);_cy=sum(q['y'] for q in _ps)/len(_ps)
+    _h=min(_ps,key=lambda q:math.dist((q['x'],q['y']),(_cx,_cy)))
+    ROOMS.append(dict(name=_g,x=_h['x'],y=_h['y'],lv=_lv,kind='feature',group=_g,home=_h['name']))
 for i,r in enumerate(ROOMS): r['id']=i
 STAIRS=M.groups
 # ----- grids
@@ -152,7 +160,7 @@ def _legs_from_points(pts):
 def _floor_graph(lv,ks,FG):
     """A floor divided by hand into rooms and corridor pieces: only the listed neighbours are joined
     (through their via points); ramp ends attach to the nearest piece (or per FG['attach'])."""
-    byname={r_['name']:r_ for r_ in ROOMS if r_['lv']==lv}
+    byname={r_['name']:r_ for r_ in ROOMS if r_['lv']==lv and r_['kind']!='feature'}
     def link(a,b,pts):
         d=sum(math.dist(p,q) for p,q in zip(pts[:-1],pts[1:]))
         within[(a,b)]=(d,_legs_from_points(pts)); within[(b,a)]=(d,_legs_from_points(pts[::-1]))
@@ -160,6 +168,8 @@ def _floor_graph(lv,ks,FG):
     for a_,b_,via in FG['edges']:
         A,B=byname[a_],byname[b_]
         link(('r',A['id']),('r',B['id']),[(A['x'],A['y'])]+[tuple(v) for v in via]+[(B['x'],B['y'])])
+    for F in [r_ for r_ in ROOMS if r_['lv']==lv and r_['kind']=='feature']:
+        H=byname[F['home']]; link(('r',F['id']),('r',H['id']),[(F['x'],F['y']),(F['x'],F['y'])])
     places=[('r',r_['id']) for r_ in byname.values()]
     for k in ks:
         if k[0]!='s': continue
@@ -260,11 +270,13 @@ def feature_of(v):
     just part of a room's exit (it belongs in the same step as the next hop)."""
     if v[0]!='r': return ('s',v)
     r_=ROOMS[v[1]]
+    if r_['kind']=='feature': return ('c',r_['lv'],r_['group'])
     if r_['kind']=='room': return ('r',v[1])
     if any(q['kind']=='room' and q['name']==r_['group'] and q['lv']==r_['lv'] for q in ROOMS): return None
     return ('c',r_['lv'],r_['group'])
 def chunk_hops(hops):
     """Split a run of walking hops (u,v) into steps: one per room, ramp end or corridor feature reached."""
+    hops=[h for h in hops if not any(n[0]=='r' and ROOMS[n[1]]['kind']=='feature' for n in h)]   # the zero-length hop to/from a corridor's own place
     out=[];cur=[]
     for i,(u,v) in enumerate(hops):
         cur.append((u,v)); f=feature_of(v)
@@ -276,7 +288,7 @@ def chunk_hops(hops):
     return out
 def target_name(v):
     if v[0]=='s': return 'stairs '+v[1]
-    r_=ROOMS[v[1]]; return r_['name'] if r_['kind']=='room' else r_['group']
+    r_=ROOMS[v[1]]; return r_['name'] if r_['kind'] in ('room','feature') else r_['group']
 def fmt(legs): return ", then ".join("%s %d"%(h,l) for h,l in legs) or "a few steps"
 def route(a,b):
     ka,kb=('r',a),('r',b)
