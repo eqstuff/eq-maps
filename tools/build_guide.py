@@ -119,11 +119,13 @@ for lv in ORDER:
     cls='box faint' if lv in Z.MINOR_LEVELS else 'box'
     sub=' no labels, no stairs found' if (not chipsof[lv] and not byl.get(lv)) else ''
     o=[f'<g class="bx" data-lv="{lv}"><rect class="{cls}" x="{x0}" y="{yy}" width="{boxw}" height="{bx["h"]}" rx="8"/>'
-       f'<text class="zt" x="{x0+LEFT}" y="{yy+23}">{zl(lv)}</text><text class="nt" x="{x0+LEFT+52}" y="{yy+23}">{E(NAMES[lv])}</text>'+(f'<text class="st" x="{x0+LEFT+52+len(NAMES[lv])*7.6+14}" y="{yy+23}">{sub}</text>' if sub else '')+thumb(lv,yy,bx["h"])]
+       f'<text class="zt" x="{x0+LEFT}" y="{yy+23}">{zl(lv)}</text><text class="nt" x="{x0+LEFT+52}" y="{yy+23}">{E(NAMES[lv])}</text>'+(f'<text class="st" x="{x0+LEFT+52}" y="{yy+42}">{sub}</text>' if sub else '')+thumb(lv,yy,bx["h"])]
     for r_,cx,line,w in chipsof[lv]:
         o.append(f'<g class="rc" data-r="{r_["id"]}"><rect x="{x0+cx:.1f}" y="{yy+34+line*26}" width="{w:.1f}" height="21" rx="10.5"/><text x="{x0+cx+w/2:.1f}" y="{yy+48.5+line*26}" text-anchor="middle">{E(r_["name"])}</text></g>')
     o.append('</g>')
     svg.append("".join(o))
+    svg.append(f'<g class="jump" data-lv="{lv}" role="link" tabindex="0" aria-label="Jump to details for {zl(lv)} {E(NAMES[lv])}"><title>Jump to the {E(NAMES[lv])} details below (keeps your From/To)</title>'
+               f'<rect x="{x0+boxw-170}" y="{yy+6}" width="68" height="20" rx="10"/><text x="{x0+boxw-136}" y="{yy+20}" text-anchor="middle">Details ↓</text></g>')
 svg.append('</svg>')
 diagram="\n".join(svg)
 
@@ -259,20 +261,15 @@ for lv in ORDER:
         pl_list.append(f'<li><span class="num">{i}</span>{E(short(p["t"]))}<span class="loc"> {waycmd(p["x"],p["y"],p["z"])}</span></li>')
     note=""
     note=Z.floor_note(lv)
-    cards.append(f'<section class="card" id="f{lv}"><header><span class="z">{zl(lv)}</span><h3>{E(NAMES[lv])}</h3></header>'
+    cards.append(f'<section class="card" id="f{lv}"><header><span class="z">{zl(lv)}</span><h3>{E(NAMES[lv])}</h3><a class="up" href="#connections">↑ Back to connections</a></header>'
       f'<div class="cols"><div>{pl}</div><div class="side">'
       +(f'<h4>Connections</h4><ul class="conn">{"".join(conn)}</ul>' if conn else '<h4>Connections</h4><p class="sub">None found.</p>')
       +(f'<h4>Labels on this floor</h4><ol class="poi">{"".join(pl_list)}</ol>' if pl_list else '')
       +note+'</div></div></section>')
-# summary table
-rows=[]
-for lv in ORDER:
-    ups=sorted({g['hi'] for g in byl.get(lv,[]) if g['lo']==lv},reverse=True)
-    dns=sorted({g['lo'] for g in byl.get(lv,[]) if g['hi']==lv},reverse=True)
-    pl=[short(p['t']) for p in pois.get(lv,[]) if not p['t'].startswith('to #')]
-    tps=[zl(p_['hi'] if lv==p_['lo'] else p_['lo'])+' ('+p_['id']+')' for p_ in PORT if lv in (p_['lo'],p_['hi'])]
-    rows.append(f'<tr><td><a href="#f{lv}"><b>{zl(lv)}</b></a></td><td>{E(NAMES[lv])}</td><td>{", ".join(zl(u) for u in ups) or "–"}</td><td>{", ".join(zl(d) for d in dns) or "–"}</td><td>{", ".join(tps) or "–"}</td></tr>')
 CSS="""
+.jump{cursor:pointer}.jump rect{fill:var(--card);stroke:var(--acc);stroke-width:1.2}.jump text{font:600 11.5px system-ui,sans-serif;fill:var(--acc);pointer-events:none}.jump:hover rect,.jump:focus rect{fill:var(--acc)}.jump:hover text,.jump:focus text{fill:#fff}.jump:focus{outline:none}
+.card header{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}.card header .up{margin-left:auto;font-size:13px;color:var(--acc);text-decoration:none;white-space:nowrap}.card header .up:hover{text-decoration:underline}
+.card,#connections{scroll-margin-top:12px}.card.flash{animation:flash 1.4s ease-out}@keyframes flash{0%{box-shadow:0 0 0 3px var(--acc)}100%{box-shadow:0 0 0 3px transparent}}
 """+open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'combobox.css')).read()+"""
 .way{font:12.5px ui-monospace,Menlo,Consolas,monospace;background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:0 5px;cursor:copy;white-space:nowrap;color:var(--fg)}.way:hover{border-color:var(--acc)}.way.copied{background:var(--acc);color:#fff}
 .wrap{max-width:1240px!important}.dgrid{grid-template-columns:minmax(0,880px) minmax(280px,1fr)!important}
@@ -343,6 +340,11 @@ svg.addEventListener('click',e=>{const t=e.target.closest('.td');if(t){e.stopPro
 document.addEventListener('click',e=>{const w=e.target.closest('.way');if(!w)return;e.stopPropagation();const t=w.textContent.trim();
  try{navigator.clipboard.writeText(t).then(()=>{const o=w.title;w.title='Copied!';w.classList.add('copied');setTimeout(()=>{w.title=o;w.classList.remove('copied')},1200)},()=>{})}catch(_){}},true);
 
+/* Jump links: pure scrolling, never touches A/B (the From/To state). */
+const goto=(el)=>{if(!el)return;el.scrollIntoView({behavior:'smooth',block:'start'});el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash')};
+svg.addEventListener('click',e=>{const j=e.target.closest('.jump');if(!j)return;e.stopPropagation();goto(document.getElementById('f'+j.dataset.lv))});
+svg.addEventListener('keydown',e=>{const j=e.target.closest('.jump');if(j&&(e.key==='Enter'||e.key===' ')){e.preventDefault();goto(document.getElementById('f'+j.dataset.lv))}});
+document.addEventListener('click',e=>{const u=e.target.closest('a.up');if(!u)return;e.preventDefault();goto(document.getElementById('connections'))});
 const cbA=makeCombo(selA,ENT,{labelFor:label,placeholder:'Type a room, NPC or floor…'});
 const cbB=makeCombo(selB,ENT,{labelFor:label,placeholder:'Type a room, NPC or floor…'});
 const _render2=render;
@@ -357,13 +359,11 @@ render();
 page=f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{E(Z.TITLE)}</title><style>{CSS}</style></head><body><div class="wrap">
 <h1>{E(Z.TITLE)}</h1>
 <p class="lead">{Z.intro(len(st))}</p>
-<h2>What connects to what</h2>
+<h2 id="connections">What connects to what</h2>
 <p class="sub">Click a floor box (or a room inside it) to set the <b style="color:#16a34a">start</b>, then click another for the <b style="color:#dc2626">destination</b>. The stairs you need light up, everything else fades, and the steps appear alongside. A third click starts over.</p>
 <div class="ctl"><label>From<select id="selA"></select></label><button id="swap" title="Swap start and destination">⇄ Swap</button><label>To<select id="selB"></select></label><button id="clr">Clear</button></div>
 <div class="dgrid"><div class="diagwrap">{diagram}</div><aside class="panel" id="panel"><p class="sub">Pick a start and a destination to see the route here.</p></aside></div>
 <p class="sub">Heights are map Z values, top is highest. Each numbered circle is a staircase or ramp (S1–S{len(st)}); its line runs between the two floors it joins. Dashed boxes are minor landings. Black “leave” badges on the highlighted route show which way to head out of that floor toward the next stairs.</p>
-<h2>Floors at a glance</h2>
-<table><tr><th>Height</th><th>Floor</th><th>Stairs up to</th><th>Stairs down to</th><th>Teleport to</th></tr>{"".join(rows)}</table>
 <h2>Floor by floor</h2>
 <div class="legend"><span><i style="border-color:var(--wall)"></i>walls</span><span><i style="border-color:var(--stair)"></i>stairs / ramps (S#)</span><span><i style="border-color:var(--ter)"></i>cave slopes</span><span><b style="color:var(--poi)">●</b> numbered labels</span></div>
 {"".join(cards)}
