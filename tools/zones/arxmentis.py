@@ -130,7 +130,7 @@ CORRIDORS = [
     ("Ring corridor (north)", 16, -171, 172), ("Ring corridor (west)", -95, -75, 172),
     ("Ring corridor (south)", -24, 12, 172), ("Ring corridor (east)", 59, -20, 172),
     ("Ward south passage", -24, -12, 172), ("Stasis corridor (north)", 2, 45, 172),
-    ("Stasis corridor (south)", -21, 88, 172), ("Junction west corridor", 83, -20, 172),
+    ("Stasis corridor (south)", -21, 88, 172), ("Junction west corridor (west)", 72, -20, 172), ("Junction west corridor (east)", 100, -20, 172),
     ("Ramp corridor", 81, 150, 172), ("Junction south corridor", 130, 95, 172),
 ]
 # Corridor pieces are grouped into a few named corridor features (shown as boxes in the guide and as
@@ -145,9 +145,10 @@ CORRIDOR_GROUPS = {
     "Study west corridor": "Anetarx Central Study",
     "Ring corridor (north)": "Ring corridor", "Ring corridor (west)": "Ring corridor", "Ring corridor (south)": "Ring corridor",
     "Ring corridor (east)": "Ring corridor", "Ward south passage": "Ring corridor",
-    "Stasis corridor (north)": "Stasis corridor", "Stasis corridor (south)": "Stasis corridor",
-    "Junction west corridor": "Junction west corridor",
-    "Ramp corridor": "Junction south corridor", "Junction south corridor": "Junction south corridor",
+    # corridors with a single way in and out aren't places of their own: each half belongs to the room (or corridor) it leads to
+    "Stasis corridor (north)": "Ring corridor", "Stasis corridor (south)": "Penutarx Stasis Lab",
+    "Junction west corridor (west)": "Ring corridor", "Junction west corridor (east)": "Penutarx Junction",
+    "Ramp corridor": "Penutarx Junction", "Junction south corridor": "Penutarx Junction",
 }
 # Map rectangle (x0, x1, y0, y1) of each room: its thumbnail in the connections diagram shows only these lines.
 ROOM_BOX = {
@@ -189,8 +190,9 @@ FLOOR_GRAPHS = {
         ("Ring corridor (south)", "Stasis corridor (north)", [(2, 12)]),
         ("Stasis corridor (north)", "Stasis corridor (south)", [(2, 68), (-21, 68)]),
         ("Stasis corridor (south)", "Penutarx Stasis Lab", [(-21, 105)]),
-        ("Ring corridor (east)", "Junction west corridor", []),
-        ("Junction west corridor", "Penutarx Junction", [(100, -20)]),
+        ("Ring corridor (east)", "Junction west corridor (west)", []),
+        ("Junction west corridor (west)", "Junction west corridor (east)", []),
+        ("Junction west corridor (east)", "Penutarx Junction", []),
         ("Ramp corridor", "Junction south corridor", [(81, 122), (130, 122)]),
         ("Junction south corridor", "Penutarx Junction", [(130, 59), (134, 45)]),
     ], attach=[((-85, 39), "Ring corridor (south)", [(-95, 12)])]),

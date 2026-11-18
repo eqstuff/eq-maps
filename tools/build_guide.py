@@ -124,6 +124,8 @@ for g_ in st:
         if UNITS[UK[key]]['kind']=='floor': continue
         ou=UNITS[UK[other]]
         ROWS[key].append((g_['id'],rowhead(node),f"{g_['id']} {'▲ up' if up else '▼ down'} to {zl(ou['lv'])} {ou['title']}"))
+for u_ in UNITS:
+    if u_['kind']=='corr' and len(ROWS.get(u_['key'],[]))<=2: print('note: corridor',u_['title'],'has only',len(ROWS.get(u_['key'],[])),'link(s): no choice to make there, so fold its halves into the neighbours (CORRIDOR_GROUPS)')
 for k_ in ROWS: ROWS[k_].sort(key=lambda r_:(HORD.index(r_[1]) if r_[1] in HORD else 9,r_[2]))
 x0=46;boxw=580;laneg=16;gap=14;CHIPR=boxw-100;LEFT=116;TW=92
 BOX={};y=0
@@ -244,7 +246,7 @@ def thumb(u,yy,h):
                 if not inr(p): continue
                 px,py=T(p[0],p[1]);o.append(f'<circle class="ts" data-s="{g["id"]}" cx="{px:.1f}" cy="{py:.1f}" r="3.8"/>')
     for r_ in rooms_by_lv.get(lv,[]):
-        if u['kind']=='corr' or (u['kind']=='room' and u['room']!=r_['id']): continue
+        if split: continue      # no room dot on a room's own thumbnail
         px,py=T(r_['x'],r_['y']);me=' me' if u['room']==r_['id'] else ''
         o.append(f'<circle class="td{me}" data-r="{r_["id"]}" cx="{px:.1f}" cy="{py:.1f}" r="{3.6 if me else 2.7}"><title>{E(r_["name"])}</title></circle>')
     o.append('</g>');return "".join(o)
