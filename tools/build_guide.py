@@ -84,12 +84,13 @@ def node_unit(n):
     r_=R.ROOMS[n[1]]
     if r_.get('kind')=='feature': return feat_unit[(r_['lv'],r_['name'])]
     return room_unit.get(n[1]) if r_.get('kind')=='room' else piece_unit(r_)
+NB={}
 def end_unit(node):
     """Unit a ramp end belongs to: its floor, or on a divided floor the unit of the piece it attaches to."""
     lv=R.nodes[node][0]
     if lv not in SPLIT: return str(lv)
     for (a_,b_) in R.within:
-        if a_==node and b_[0]=='r': return node_unit(b_)
+        if a_==node and b_[0]=='r': NB[node]=b_; return node_unit(b_)
     return str(lv)
 for g_ in st:
     g_['ulo']=end_unit(('s',g_['id'],g_['lo'],'f0')); g_['uhi']=end_unit(('s',g_['id'],g_['hi'],'h0'))
@@ -102,7 +103,28 @@ for (a_,b_),(d_,legs_) in R.within.items():
 ukey_title={u['key']:u['title'] for u in UNITS}
 def dirglyph(h): return {'N':'↑','NE':'↗','E':'→','SE':'↘','S':'↓','SW':'↙','W':'←','NW':'↖'}.get(h,'')
 HORD=['N','NE','E','SE','S','SW','W','NW']
-def exits_of(k): return sorted(((h,ukey_title[t],t) for t,h in EXITS.get(k,{}).items()),key=lambda x:(HORD.index(x[0]),x[1]))
+# Every link out of a box on a divided floor is one row: next room or corridor, or a ramp to another place.
+# All links are drawn the same way (rows below -> lines on the right); a ramp is just a link whose far end is on another floor.
+LOCAL=[]
+for ka in sorted(EXITS):
+    for kb in EXITS[ka]:
+        if ka<kb:
+            a_,b_=sorted((ka,kb),key=lambda k:UK[k])
+            LOCAL.append(dict(id=f"l-{ka}-{kb}",local=True,ulo=b_,uhi=a_,lo=UNITS[UK[b_]]['lv'],hi=UNITS[UK[a_]]['lv']))
+ROWS=collections.defaultdict(list)
+for l_ in LOCAL:
+    for ka,kb in ((l_['uhi'],l_['ulo']),(l_['ulo'],l_['uhi'])):
+        ROWS[ka].append((l_['id'],EXITS[ka][kb],ukey_title[kb]))
+def rowhead(node):
+    b_=NB.get(node)
+    lg=R.within.get((b_,node),(0,[]))[1] if b_ else []
+    return lg[0][0] if lg else ''
+for g_ in st:
+    for key,node,other,up in ((g_['ulo'],('s',g_['id'],g_['lo'],'f0'),g_['uhi'],True),(g_['uhi'],('s',g_['id'],g_['hi'],'h0'),g_['ulo'],False)):
+        if UNITS[UK[key]]['kind']=='floor': continue
+        ou=UNITS[UK[other]]
+        ROWS[key].append((g_['id'],rowhead(node),f"{g_['id']} {'▲ up' if up else '▼ down'} to {zl(ou['lv'])} {ou['title']}"))
+for k_ in ROWS: ROWS[k_].sort(key=lambda r_:(HORD.index(r_[1]) if r_[1] in HORD else 9,r_[2]))
 x0=46;boxw=580;laneg=16;gap=14;CHIPR=boxw-100;LEFT=116;TW=92
 BOX={};y=0
 chipsof={}
@@ -117,7 +139,7 @@ for u_ in UNITS:
     has_geo=bool(geo.get(lv))
     h=(40 if not chips else 36+(line+1)*26+2)
     if has_geo: h=max(h,80)
-    if u_['kind']!='floor': h=max(h,54+len(exits_of(key))*15+8)
+    if u_['kind']!='floor': h=max(h,54+len(ROWS.get(key,[]))*15+8)
     BOX[key]=dict(y=y,h=h);y+=h+gap
 PORT=[]
 for p_ in R.PORTALS:
@@ -125,7 +147,7 @@ for p_ in R.PORTALS:
     ua,ub=room_unit[p_['a']],room_unit[p_['b']]
     lo_,hi_=(ua,ub) if la_<=lb_ else (ub,ua)
     PORT.append(dict(id=p_['id'],lo=min(la_,lb_),hi=max(la_,lb_),ulo=lo_,uhi=hi_,portal=True,name=p_['name'],text=p_['text']))
-edges=[(UK[g['uhi']],UK[g['ulo']],g) for g in st+PORT]
+edges=[(UK[g['uhi']],UK[g['ulo']],g) for g in st+PORT+LOCAL]
 lanes=[]
 for e in sorted(edges,key=lambda e:(e[1]-e[0])):
     for ln in lanes:
@@ -142,6 +164,8 @@ for lv,lst in cnt.items():
     n=len(lst);bx=BOX[lv]
     for k,gid in enumerate(lst):
         ANCH["%s@%s"%(gid,lv)]=round(bx['y']+10+(k*(bx['h']-20)/(n-1) if n>1 else (bx['h']-20)/2),1)
+for key,rows_ in ROWS.items():          # on a divided floor each link leaves from its own row
+    for i_,(gid,_h,_t) in enumerate(rows_): ANCH[f"{gid}@{key}"]=round(BOX[key]['y']+58+i_*15,1)
 W=x0+boxw+30+len(lanes)*laneg+40;H=y
 cols=['#c2410c','#1d4ed8','#047857','#a21caf','#b45309','#0e7490','#be123c','#4d7c0f']
 svg=[f'<svg viewBox="0 0 {W} {H}" class="diag" role="img" aria-label="Floor connection diagram">']
@@ -149,10 +173,10 @@ for a_,b_,g in edges:
     k=laneof[g['id']];lx=x0+boxw+22+k*laneg;c=cols[k%len(cols)]
     ya=ANCH["%s@%s"%(g['id'],UNITS[a_]['key'])];yb=ANCH["%s@%s"%(g['id'],UNITS[b_]['key'])]
     dash=' stroke-dasharray="6 4"' if g.get('portal') else ''
-    lab='T' if g.get('portal') else g["id"][1:]
-    ttl=(f'{g["id"]}: teleport between {zl(g["lo"])} {E(NAMES[g["lo"]])} and {zl(g["hi"])} {E(NAMES[g["hi"]])}' if g.get('portal') else f'{g["id"]}: {zl(g["lo"])} {E(NAMES[g["lo"]])} to {zl(g["hi"])} {E(NAMES[g["hi"]])}')
+    lab='T' if g.get('portal') else ('' if g.get('local') else g["id"][1:])
+    ttl=(f'{E(ukey_title[g["uhi"]])} ↔ {E(ukey_title[g["ulo"]])}' if g.get('local') else f'{g["id"]}: teleport between {zl(g["lo"])} {E(NAMES[g["lo"]])} and {zl(g["hi"])} {E(NAMES[g["hi"]])}' if g.get('portal') else f'{g["id"]}: {zl(g["lo"])} {E(NAMES[g["lo"]])} to {zl(g["hi"])} {E(NAMES[g["hi"]])}')
     svg.append(f'<g class="edge" id="e-{g["id"]}"><title>{ttl}</title><path d="M{x0+boxw} {ya:.1f} H{lx} V{yb:.1f} H{x0+boxw}" fill="none" stroke="{c}" stroke-width="1.6"{dash}/>'
-      f'<circle cx="{lx}" cy="{(ya+yb)/2:.1f}" r="9" fill="{c}"/><text x="{lx}" y="{(ya+yb)/2+3.2:.1f}" class="pill" text-anchor="middle">{lab}</text></g>')
+      +(f'<circle cx="{lx}" cy="{(ya+yb)/2:.1f}" r="9" fill="{c}"/><text x="{lx}" y="{(ya+yb)/2+3.2:.1f}" class="pill" text-anchor="middle">{lab}</text></g>' if lab else f'<circle cx="{lx}" cy="{(ya+yb)/2:.1f}" r="4.5" fill="{c}"/></g>'))
 def clip(l,rc):
     """Liang-Barsky: the part of segment l=(x1,y1,z1,x2,y2,z2) inside rc=(x0,x1,y0,y1), or None."""
     xa,ya,xb,yb=l[0],l[1],l[3],l[4];t0,t1=0.0,1.0
@@ -231,30 +255,13 @@ for u_ in UNITS:
     sub=' no labels, no links found' if (u_['kind']=='floor' and not chipsof[key] and not byl.get(lv)) else (u_['sub'] if u_['kind']!='floor' else '')
     pick={'floor':"F%d"%lv,'room':"R%s"%u_['room'],'corr':"R%s"%u_.get('fid')}[u_['kind']]
     o=[f'<g class="bx" data-lv="{lv}" data-u="{key}" data-pick="{pick}"><rect class="{cls}" x="{x0}" y="{yy}" width="{boxw}" height="{bx["h"]}" rx="8"/>'
-       f'<text class="zt" x="{x0+LEFT}" y="{yy+23}">{zl(lv)}</text><text class="nt" x="{x0+LEFT+52}" y="{yy+23}">{E(title)}</text>'+(f'<text class="st" x="{x0+LEFT+52}" y="{yy+42}">{E(sub)}</text>' if sub else '')+thumb(u_,yy,bx["h"])+''.join(f'<text class="ex" x="{x0+LEFT}" y="{yy+62+i_*15}"><tspan class="exh">{h_} {dirglyph(h_)}</tspan> {E(t_)}</text>' for i_,(h_,t_,_k) in enumerate(exits_of(key)))]
+       f'<text class="zt" x="{x0+LEFT}" y="{yy+23}">{zl(lv)}</text><text class="nt" x="{x0+LEFT+52}" y="{yy+23}">{E(title)}</text>'+(f'<text class="st" x="{x0+LEFT+52}" y="{yy+42}">{E(sub)}</text>' if sub else '')+thumb(u_,yy,bx["h"])+''.join(f'<text class="ex" x="{x0+LEFT}" y="{yy+62+i_*15}"><tspan class="exh">{h_} {dirglyph(h_) if h_ else '•'}</tspan> {E(t_)}</text>' for i_,(_id,h_,t_) in enumerate(ROWS.get(key,[])))]
     for r_,cx,line,w in chipsof[key]:
         o.append(f'<g class="rc" data-r="{r_["id"]}"><rect x="{x0+cx:.1f}" y="{yy+34+line*26}" width="{w:.1f}" height="21" rx="10.5"/><text x="{x0+cx+w/2:.1f}" y="{yy+48.5+line*26}" text-anchor="middle">{E(r_["name"])}</text></g>')
     o.append('</g>')
     svg.append("".join(o))
     svg.append(f'<g class="jump" data-lv="{lv}" role="link" tabindex="0" aria-label="Jump to details for {zl(lv)} {E(NAMES[lv])}"><title>Jump to the {E(NAMES[lv])} floor details below (keeps your From/To)</title>'
                f'<rect x="{x0+boxw-170}" y="{yy+6}" width="68" height="20" rx="10"/><text x="{x0+boxw-136}" y="{yy+20}" text-anchor="middle">Details ↓</text></g>')
-LOC=[];_lanes=[]
-for ka in sorted(EXITS):
-    for kb in EXITS[ka]:
-        if ka<kb: LOC.append((ka,kb))
-for e_ in sorted(LOC,key=lambda e:abs(UK[e[0]]-UK[e[1]])):
-    lo_,hi_=sorted((UK[e_[0]],UK[e_[1]]))
-    for ln in _lanes:
-        if all(hi_<a_ or lo_>b_ for a_,b_,_ in ln): ln.append((lo_,hi_,e_));break
-    else: _lanes.append([(lo_,hi_,e_)])
-for k_,ln in enumerate(_lanes):
-    lx=x0+345+k_*9
-    for _a,_b,(ka,kb) in ln:
-        ya=BOX[ka]['y']+58+[t for _h,_t,t in exits_of(ka)].index(kb)*15
-        yb=BOX[kb]['y']+58+[t for _h,_t,t in exits_of(kb)].index(ka)*15
-        ha,hb=EXITS[ka][kb],EXITS[kb][ka]
-        svg.append(f'<g class="le" id="l-{ka}-{kb}"><title>{E(ukey_title[ka])} ({ha}) ↔ {E(ukey_title[kb])} ({hb})</title>'
-                   f'<path d="M{x0+330} {ya} H{lx} V{yb} H{x0+330}"/><circle cx="{x0+330}" cy="{ya}" r="2.6"/><circle cx="{x0+330}" cy="{yb}" r="2.6"/></g>')
 svg.append('</svg>')
 diagram="\n".join(svg)
 
@@ -462,7 +469,7 @@ ol.poi li{margin:2px 0;font-size:13.5px}.num{display:inline-block;width:18px;hei
 .note{font-size:13px;color:var(--mut);background:var(--bg);border-left:3px solid var(--acc);padding:6px 10px;margin:12px 0 0}code{font:12.5px ui-monospace,Menlo,monospace;background:var(--bg);padding:1px 5px;border-radius:4px;border:1px solid var(--line)}
 .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--mut);margin:8px 0 0}.legend i{display:inline-block;width:22px;height:0;border-top:3px solid;vertical-align:middle;margin-right:6px}
 """
-JS='\nconst FL=%FL%,RM=%RM%,ANCH=%ANCH%,BOX=%BOX%,X1=%X1%;\nconst GL={N:\'↑\',NE:\'↗\',E:\'→\',SE:\'↘\',S:\'↓\',SW:\'↙\',W:\'←\',NW:\'↖\'};\nlet A=null,B=null,ROUTES=null,loadErr=false;\nconst $=q=>document.querySelector(q),svg=$(\'svg.diag\'),panel=$(\'#panel\'),selA=$(\'#selA\'),selB=$(\'#selB\');\nconst NS=\'http://www.w3.org/2000/svg\';\nconst zl=z=>z>0?\'+\'+z:String(z);\nconst flName={};FL.forEach(f=>flName[f[0]]=f[1]);\nconst rmById={};RM.forEach(r=>rmById[r[0]]=r);\nfunction lvOf(c){return c[0]===\'F\'?c.slice(1):rmById[+c.slice(1)][3]}\nfunction label(c){return c[0]===\'F\'?zl(+c.slice(1))+\' \'+flName[+c.slice(1)]+\' (floor)\':rmById[+c.slice(1)][1]}\nfunction fill(sel){sel.innerHTML=\'<option value="">–</option>\';\n FL.forEach(f=>{const g=document.createElement(\'optgroup\');g.label=zl(f[0])+\' \'+f[1];\n  const o=document.createElement(\'option\');o.value=\'F\'+f[0];o.textContent=\'Anywhere on this floor\';g.appendChild(o);\n  RM.filter(r=>r[2]===f[0]).forEach(r=>{const o=document.createElement(\'option\');o.value=\'R\'+r[0];o.textContent=r[1];g.appendChild(o)});\n  sel.appendChild(g)})}\nfill(selA);fill(selB);\nfunction pick(c){ if(A===null||(A!==null&&B!==null)){A=c;B=null}else if(c!==A){B=c} render() }\nsvg.addEventListener(\'click\',e=>{const rc=e.target.closest(\'.rc\'),bx=e.target.closest(\'.bx\');\n if(rc){pick(\'R\'+rc.dataset.r);return} if(bx&&bx.dataset.pick){pick(bx.dataset.pick)}});\nselA.onchange=()=>{A=selA.value||null;if(A&&A===B)B=null;render()};\nselB.onchange=()=>{B=selB.value||null;if(B&&B===A)A=null;render()};\n$(\'#swap\').onclick=()=>{[A,B]=[B,A];render()};\n$(\'#clr\').onclick=()=>{A=B=null;render()};\nfunction tag(lv,txt,cls,off){const g=document.createElementNS(NS,\'g\');g.setAttribute(\'class\',\'tag \'+cls);\n const b=BOX[lv],y=b.y+b.h/2-8+off;g.innerHTML=`<rect x="2" y="${y}" width="40" height="16"/><text x="22" y="${y+11.5}">${txt}</text>`;svg.appendChild(g)}\nfunction render(){\n selA.value=A||\'\';selB.value=B||\'\';\n svg.querySelectorAll(\'.tag,.xp\').forEach(e=>e.remove());\n svg.querySelectorAll(\'.on,.src,.dst,.pick\').forEach(e=>e.classList.remove(\'on\',\'src\',\'dst\',\'pick\'));\n svg.classList.remove(\'active\');\n const boxes={};svg.querySelectorAll(\'.bx\').forEach(b=>boxes[b.dataset.u]=b);\n const rcs={};svg.querySelectorAll(\'.rc\').forEach(r=>rcs[\'R\'+r.dataset.r]=r);\n if(A&&rcs[A])rcs[A].classList.add(\'src\'); if(B&&rcs[B])rcs[B].classList.add(\'dst\');\n if(A){const bx=boxes[lvOf(A)];bx.classList.add(B?\'src\':\'pick\');tag(lvOf(A),\'FROM\',\'a\',(B&&lvOf(B)===lvOf(A))?-10:0)}\n if(B){boxes[lvOf(B)].classList.add(\'dst\');tag(lvOf(B),\'TO\',\'b\',(A&&lvOf(A)===lvOf(B))?10:0)}\n if(!A){panel.innerHTML=\'<p class="sub">Pick a start (click a floor or room in the diagram, or use the menus).</p>\';return}\n if(!B){panel.innerHTML=`<p><b>From:</b> ${label(A)}</p><p class="sub">Now pick a destination.</p>`;return}\n if(!ROUTES){panel.innerHTML=loadErr?\'<p class="sub">Route data didn’t load, so I can’t show the route.</p>\':\'<p class="sub">Loading routes…</p>\';return}\n const d=ROUTES[A+\'|\'+B];\n const head=`<p style="margin:0 0 4px"><b style="color:#16a34a">${label(A)}</b> → <b style="color:#dc2626">${label(B)}</b></p>`;\n if(!d){panel.innerHTML=head+\'<p class="sub">No walking route between these on the map. The Teleport and pit are cut off from the tower, and the +468 platform has no stairs.</p>\';return}\n svg.classList.add(\'active\');\n const fl=new Set(d.f);fl.forEach(l=>boxes[l]&&boxes[l].classList.add(\'on\'));\n for(let i=0;i+1<d.f.length;i++){const e=$(\'#l-\'+[d.f[i],d.f[i+1]].sort().join(\'-\'));if(e)e.classList.add(\'on\')}\n d.s.forEach(s=>{const e=$(\'#e-\'+s.id);if(e)e.classList.add(\'on\');\n  if(s.exit){const y=ANCH[s.id+\'@\'+s.fr];if(y===undefined)return;const g=document.createElementNS(NS,\'g\');g.setAttribute(\'class\',\'xp\');\n   g.innerHTML=`<rect x="${X1-94}" y="${y-9}" width="86" height="18"/><text x="${X1-51}" y="${y+4}">leave ${GL[s.exit]||\'\'} ${s.exit}</text>`;svg.appendChild(g)}});\n panel.innerHTML=head+d.h;\n}\nfetch(\'routes.json\').then(r=>r.json()).then(j=>{ROUTES=j;render()}).catch(()=>{loadErr=true;render()});\nrender();\n'
+JS='\nconst FL=%FL%,RM=%RM%,ANCH=%ANCH%,BOX=%BOX%,X1=%X1%;\nconst GL={N:\'↑\',NE:\'↗\',E:\'→\',SE:\'↘\',S:\'↓\',SW:\'↙\',W:\'←\',NW:\'↖\'};\nlet A=null,B=null,ROUTES=null,loadErr=false;\nconst $=q=>document.querySelector(q),svg=$(\'svg.diag\'),panel=$(\'#panel\'),selA=$(\'#selA\'),selB=$(\'#selB\');\nconst NS=\'http://www.w3.org/2000/svg\';\nconst zl=z=>z>0?\'+\'+z:String(z);\nconst flName={};FL.forEach(f=>flName[f[0]]=f[1]);\nconst rmById={};RM.forEach(r=>rmById[r[0]]=r);\nfunction lvOf(c){return c[0]===\'F\'?c.slice(1):rmById[+c.slice(1)][3]}\nfunction label(c){return c[0]===\'F\'?zl(+c.slice(1))+\' \'+flName[+c.slice(1)]+\' (floor)\':rmById[+c.slice(1)][1]}\nfunction fill(sel){sel.innerHTML=\'<option value="">–</option>\';\n FL.forEach(f=>{const g=document.createElement(\'optgroup\');g.label=zl(f[0])+\' \'+f[1];\n  const o=document.createElement(\'option\');o.value=\'F\'+f[0];o.textContent=\'Anywhere on this floor\';g.appendChild(o);\n  RM.filter(r=>r[2]===f[0]).forEach(r=>{const o=document.createElement(\'option\');o.value=\'R\'+r[0];o.textContent=r[1];g.appendChild(o)});\n  sel.appendChild(g)})}\nfill(selA);fill(selB);\nfunction pick(c){ if(A===null||(A!==null&&B!==null)){A=c;B=null}else if(c!==A){B=c} render() }\nsvg.addEventListener(\'click\',e=>{const rc=e.target.closest(\'.rc\'),bx=e.target.closest(\'.bx\');\n if(rc){pick(\'R\'+rc.dataset.r);return} if(bx&&bx.dataset.pick){pick(bx.dataset.pick)}});\nselA.onchange=()=>{A=selA.value||null;if(A&&A===B)B=null;render()};\nselB.onchange=()=>{B=selB.value||null;if(B&&B===A)A=null;render()};\n$(\'#swap\').onclick=()=>{[A,B]=[B,A];render()};\n$(\'#clr\').onclick=()=>{A=B=null;render()};\nfunction tag(lv,txt,cls,off){const g=document.createElementNS(NS,\'g\');g.setAttribute(\'class\',\'tag \'+cls);\n const b=BOX[lv],y=b.y+b.h/2-8+off;g.innerHTML=`<rect x="2" y="${y}" width="40" height="16"/><text x="22" y="${y+11.5}">${txt}</text>`;svg.appendChild(g)}\nfunction render(){\n selA.value=A||\'\';selB.value=B||\'\';\n svg.querySelectorAll(\'.tag,.xp\').forEach(e=>e.remove());\n svg.querySelectorAll(\'.on,.src,.dst,.pick\').forEach(e=>e.classList.remove(\'on\',\'src\',\'dst\',\'pick\'));\n svg.classList.remove(\'active\');\n const boxes={};svg.querySelectorAll(\'.bx\').forEach(b=>boxes[b.dataset.u]=b);\n const rcs={};svg.querySelectorAll(\'.rc\').forEach(r=>rcs[\'R\'+r.dataset.r]=r);\n if(A&&rcs[A])rcs[A].classList.add(\'src\'); if(B&&rcs[B])rcs[B].classList.add(\'dst\');\n if(A){const bx=boxes[lvOf(A)];bx.classList.add(B?\'src\':\'pick\');tag(lvOf(A),\'FROM\',\'a\',(B&&lvOf(B)===lvOf(A))?-10:0)}\n if(B){boxes[lvOf(B)].classList.add(\'dst\');tag(lvOf(B),\'TO\',\'b\',(A&&lvOf(A)===lvOf(B))?10:0)}\n if(!A){panel.innerHTML=\'<p class="sub">Pick a start (click a floor or room in the diagram, or use the menus).</p>\';return}\n if(!B){panel.innerHTML=`<p><b>From:</b> ${label(A)}</p><p class="sub">Now pick a destination.</p>`;return}\n if(!ROUTES){panel.innerHTML=loadErr?\'<p class="sub">Route data didn’t load, so I can’t show the route.</p>\':\'<p class="sub">Loading routes…</p>\';return}\n const d=ROUTES[A+\'|\'+B];\n const head=`<p style="margin:0 0 4px"><b style="color:#16a34a">${label(A)}</b> → <b style="color:#dc2626">${label(B)}</b></p>`;\n if(!d){panel.innerHTML=head+\'<p class="sub">No walking route between these on the map. The Teleport and pit are cut off from the tower, and the +468 platform has no stairs.</p>\';return}\n svg.classList.add(\'active\');\n const fl=new Set(d.f);fl.forEach(l=>boxes[l]&&boxes[l].classList.add(\'on\'));\n for(let i=0;i+1<d.f.length;i++){const e=$(\'#e-l-\'+[d.f[i],d.f[i+1]].sort().join(\'-\'));if(e)e.classList.add(\'on\')}\n d.s.forEach(s=>{const e=$(\'#e-\'+s.id);if(e)e.classList.add(\'on\');\n  if(s.exit){const y=ANCH[s.id+\'@\'+s.fr];if(y===undefined)return;const g=document.createElementNS(NS,\'g\');g.setAttribute(\'class\',\'xp\');\n   g.innerHTML=`<rect x="${X1-94}" y="${y-9}" width="86" height="18"/><text x="${X1-51}" y="${y+4}">leave ${GL[s.exit]||\'\'} ${s.exit}</text>`;svg.appendChild(g)}});\n panel.innerHTML=head+d.h;\n}\nfetch(\'routes.json\').then(r=>r.json()).then(j=>{ROUTES=j;render()}).catch(()=>{loadErr=true;render()});\nrender();\n'
 JS=(JS.replace('%FL%',json.dumps([[lv,NAMES[lv]] for lv in ORDER if lv not in Z.SKY_LEVELS])).replace('%RM%',json.dumps([[r_['id'],r_['name'],r_['lv'],node_unit(('r',r_['id']))] for r_ in R.ROOMS if r_.get('kind') in ('room','feature')])).replace('%ANCH%',json.dumps(ANCH)).replace('%BOX%',json.dumps(BOX)).replace('%X1%',str(x0+boxw)))
 import html as _h
 _ent=[dict(text=f"{zl(lv)} {NAMES[lv]}",sub="Anywhere on this floor",kind="floor",code="F%d"%lv) for lv in ORDER if lv not in Z.SKY_LEVELS and lv not in SPLIT]
