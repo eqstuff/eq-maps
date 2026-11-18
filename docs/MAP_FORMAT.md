@@ -32,6 +32,10 @@ map z =  Z
 
 so a map point (x, y, z) corresponds to `/loc` = (−y, −x, z). The conversion follows the community-documented format (e.g. the Allakhazam EverQuest forum thread on map file coordinates). With north at the top of the in-game map this puts **north at −y (page up) and east at +x (page right)** when drawn with y increasing downward, which is how the generated plans are drawn and how compass headings are computed (`hd()` in `route.py`).
 
+## Waypoints (`/way`)
+
+The generated pages print locations as `/way Y, X, Z` commands (for example `/way -20, 2, -1`). `/way` (short for `/waypoint`) takes the same Y, X, Z order that `/loc` prints, so a map point (x, y) on a floor at height z becomes `/way −y, −x, z`. Pages render these as click-to-copy chips: paste into the chat window and EverQuest sets a waypoint you can follow. The Z used is the floor's nominal height (labels use their own Z).
+
 **Not verified in the client.** Before trusting headings for a new zone, stand at a known stair top, type `/loc`, and compare with the numbers the page prints. If north/south or east/west are mirrored, fix the sign in `hd()` and `loc()`.
 
 ## What the file does NOT contain

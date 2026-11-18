@@ -8,7 +8,7 @@ The first zone done is **Arx Mentis** (13 floor heights, 23 staircases/ramps, 21
 
 | Page | What it does |
 |---|---|
-| `site/arxmentis/index.html` | Interactive connection diagram. Click a floor or room for the start, another for the destination: the stairs between them light up, everything else fades, and the steps appear with exit headings. Plus a plan view of every floor. |
+| `site/arxmentis/index.html` | Interactive connection diagram with a small outline of each floor. Click a floor or room for the start, another for the destination: the stairs (and teleport) between them light up, everything else fades, and the steps appear with exit headings and click-to-copy `/way` waypoints. Plus a plan view of every floor. |
 | `site/arxmentis/cheatsheet.html` | Route finder, 19×19 matrix and per-room cheat sheets: “from X to Y: leave heading E, take S8 up…”. |
 
 ## Quick start

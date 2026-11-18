@@ -150,6 +150,13 @@ for g in STAIRS:
             a=('s',g['id'],g['lo'],'f%d'%i);b=('s',g['id'],g['hi'],'h%d'%j)
             ln=math.sqrt((abs(f_[0]-h_[0])+abs(f_[1]-h_[1]))**2+(g['hi']-g['lo'])**2)
             G.add_edge(a,b,weight=ln,stair=g['id'])
+PORTALS=[]
+_byname={r_['name']:r_ for r_ in ROOMS}
+for p_ in getattr(Z,'PORTALS',[]):
+    a_,b_=_byname.get(p_['from_room']),_byname.get(p_['to_room'])
+    if a_ and b_:
+        PORTALS.append(dict(id=p_['id'],name=p_['name'],a=a_['id'],b=b_['id'],text=p_.get('text','')))
+        G.add_edge(('r',a_['id']),('r',b_['id']),weight=float(p_.get('cost',20)),portal=p_['id'])
 def fmt(legs): return ", then ".join("%s %d"%(h,l) for h,l in legs) or "a few steps"
 def route(a,b):
     ka,kb=('r',a),('r',b)
@@ -160,7 +167,10 @@ def route(a,b):
     i=0
     while i<len(p)-1:
         u,v=p[i],p[i+1]
-        if G.edges[u,v].get('stair') and u[0]=='s' and v[0]=='s' and u[1]==v[1] and u[2]!=v[2]:
+        if G.edges[u,v].get('portal'):
+            steps.append(dict(k='portal',id=G.edges[u,v]['portal'],fr=nodes[u][0],to=nodes[v][0],toname=NAMES.get(nodes[v][0],'')))
+            dist+=G.edges[u,v]['weight']
+        elif G.edges[u,v].get('stair') and u[0]=='s' and v[0]=='s' and u[1]==v[1] and u[2]!=v[2]:
             g=[s for s in STAIRS if s['id']==u[1]][0]
             up=v[2]>u[2]; nst+=1
             steps.append(dict(k='stair',id=g['id'],dir='up' if up else 'down',to=v[2],toname=NAMES[v[2]]))

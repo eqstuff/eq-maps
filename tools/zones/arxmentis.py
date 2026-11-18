@@ -72,6 +72,14 @@ def is_room_label(t):
 EXTRA_ROOMS = [("Central hub (ground)", 0, 0, -1),
                ("Pit (merchants / Firiona Vie)", 0, -20, -484)]
 
+# --- teleports (not in the map file) ------------------------------------------
+# Links between two named rooms on different floors.  Added to the route graph as an
+# extra connection (two-way).  Source: in-game experience of the repo owner, not the map.
+PORTALS = [dict(id="T1", name="Teleport",
+                from_room="Teleport", to_room="Central hub (ground)", cost=20,
+                text="The teleport pad at the top of the pit pyramid. It is reported to land you at the "
+                     "four-way crossing of the ground-floor central hub.")]
+
 # --- walkable grids ---------------------------------------------------------
 GRID_LEVELS = [172, 115, 105, 85, 80, 45, 24, -1, -6, -36, -71]   # the connected tower
 EXTRA_GRID_LEVELS = [-429, -484]                                    # cut off from the tower
@@ -82,7 +90,7 @@ def floor_note(lv):
         -1: '<p class="note">The three <b>“to #2 / #3 / #4”</b> tags are the mapper’s own markers around the central hub. They sit at the exits that lead to S4/S5 (down to the gardens), S9/S5 (east) and S8 (up to the Relic Keep); the numbering itself isn’t explained in the file, so treat that mapping as a reading.</p>',
         115: '<p class="note">This is a natural cave, so it has irregular sloped edges instead of clean stairs. Part of the west edge climbs to about +160 with no landing drawn.</p>',
         468: '<p class="note">275 line segments in a square hall with round pillars, about 470 units above the ground floor. No stairs, ramps or labels reach it, so the file doesn’t say how you get there (probably a teleport destination, or a scenery shell).</p>',
-        -429: '<p class="note">Just a cross-shaped platform with the “Teleport” label. The four long ramps lead down to the pit floor. Where the teleport sends you isn’t in the map data.</p>',
+        -429: '<p class="note">Just a cross-shaped platform with the “Teleport” label at the top of the pit pyramid. The four long ramps lead down to the pit floor. The map file doesn’t say where the teleport goes; the <b>T1</b> link to the ground-floor central hub comes from in-game experience, not from the map. If it is one-way in game, the return direction shown here isn’t real.</p>',
     }
     return notes.get(lv, "")
 
@@ -92,7 +100,7 @@ def intro(n_stairs):
             f"joined by {n_stairs} staircases or ramps. The diagram shows what links to what; the cards below show "
             "each floor’s layout, where each stair starts and ends, and what’s on it.")
 
-LIMITS_NOTE = ("The “Teleport” destination and the way into the sky platform are unknown. Floor names come from "
+LIMITS_NOTE = ("The way into the sky platform is unknown, and the teleport link (T1) is added from in-game experience rather than read from the map. Floor names come from "
                "Brewall’s labels (Teritarx / Protarx / Anetarx / Penutarx look like four tiers, low to high); "
                "where a floor had no label it is described by what it connects.")
 SOURCE_NOTE = ("Source: <a href=\"https://github.com/RedGuides/brewall-maps\">RedGuides/brewall-maps</a> on GitHub, "
@@ -101,6 +109,6 @@ SOURCE_NOTE = ("Source: <a href=\"https://github.com/RedGuides/brewall-maps\">Re
 ROUTES_TITLE = "Arx Mentis: room-to-room routes"
 ROUTES_LIMITS_NOTE = ("The Teritarx Preservation Chamber is a closed outline on the map, so its route ends at its walls. "
                       "The Magicae Sanctuary cave has no closed outline, so its directions are rougher. The Teleport and "
-                      "the pit are connected to each other (S1) but not to the tower, and the map doesn’t say where the "
-                      "Teleport goes. The +468 sky platform isn’t included. “Crasis Whesar” and “Keeper of the Matrix” "
+                      "the pit connect to the tower only through the teleport link T1 (central hub), which comes from in-game "
+                      "experience, not from the map, and is assumed to work both ways. The +468 sky platform isn’t included. “Crasis Whesar” and “Keeper of the Matrix” "
                       "may be NPC labels rather than rooms.")

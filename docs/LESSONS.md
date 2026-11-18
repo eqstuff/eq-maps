@@ -36,3 +36,9 @@ Things that went wrong while building the Arx Mentis guide, and what fixed them.
 * A module-level variable named `P` (labels) was overwritten by a loop variable in `model.py`: name loop temporaries distinctly.
 * Run Python with `-I` (isolated) when reading downloaded data, and keep scripts out of the data directory.
 * Verify against a baseline after refactors: building again must give a byte-identical `routes.json` (it did when the tools were moved to the zone-config layout).
+
+## Later additions
+
+* A helper named `way()` clashed with a loop variable `way="up"` in `build_guide.py` ("'str' object is not callable"). The helper is now `waycmd()`; avoid generic names in the big top-level build scripts.
+* Adding the T1 portal connected the pit and teleport cross to the tower: 240 new route pairs, and no existing route changed (checked by comparing the `s`/`f` fields of every key in `routes.json` before and after).
+* The diagram's room chips, thumbnails and "leave" pills all share the box width: thumbnails take the left ~100 px, the "leave" pills the right ~100 px, chips wrap in between.

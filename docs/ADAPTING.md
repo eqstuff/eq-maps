@@ -11,6 +11,7 @@ Any Brewall zone with several levels works the same way. Budget a couple of hour
 4. **Names and order**: fill `FLOOR_NAMES`, `ROUTE_NAMES`, `FLOOR_ORDER` (top to bottom), `MINOR_LEVELS` (landings), `SKY_LEVELS` (geometry nothing connects to).
 5. **Rooms**: `is_room_label()` decides which labels are destinations. Print the labels from `analyze_levels.py` and exclude NPCs/merchants/spawns by prefix. Add `EXTRA_ROOMS` for unlabeled hubs you want as waypoints. Duplicate names get a floor suffix automatically.
 6. **Stairs that merge wrong**: set `MERGE_GAP[level]` (units) for flights whose rails are far apart or that fan out from a hub; see the pit ramps in `arxmentis.py`.
+6b. **Teleports**: if the zone has portals between floors, list them in `PORTALS` (room names must match labels or `EXTRA_ROOMS`). Mark in the page text that they come from play experience, since the map doesn't contain them.
 7. **Grid levels**: list the connected floors in `GRID_LEVELS` and the cut-off ones in `EXTRA_GRID_LEVELS`.
 8. **Build**: `MAP_DIR=... ./build.sh <zone>`. Read the console output:
    * `far-snap nodes` — a node more than 25 cells from a walkable cell (label outside the walls, or a stair end that doesn't line up).

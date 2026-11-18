@@ -8,3 +8,4 @@ Generates interactive guides for multi-level EverQuest zones from Brewall's map 
 * After changing `model.py` or `route.py`, rebuild Arx Mentis and compare `routes.json` with the committed one; unexpected differences mean a regression. Differences caused by an intended change should be explained in the commit message.
 * The compass/`/loc` orientation (MAP_FORMAT.md) is derived, not verified in the game client. Don't claim otherwise in page text.
 * The front end is generated inside `build_guide.py` (CSS/JS strings, a Python f-string: braces in JS must go through the `JS` placeholder replacement, not the f-string).
+* Locations are shown with `way()` (click-to-copy `/way Y, X, Z`), never bare `/loc` numbers; keep it that way so players are nudged to use waypoints.

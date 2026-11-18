@@ -9,7 +9,9 @@ ROOMS=R.ROOMS; ids=[r['id'] for r in ROOMS]
 ORDER=sorted(ids,key=lambda i:(-ROOMS[i]['lv'] if False else 0))
 # order rooms top floor to bottom, then name
 order=sorted(ids,key=lambda i:(-ROOMS[i]['lv'],ROOMS[i]['name']))
-def loc(x,y): return "%d, %d"%(round(-y),round(-x))
+def waycmd(x,y,z):
+    """A copyable /way command; /way takes the same order as /loc prints: Y, X, Z."""
+    return f'<code class="way" title="Click to copy, then paste in the chat window to set a waypoint">/way {round(-y)}, {round(-x)}, {round(z)}</code>'
 def legs(l): return " → ".join("<b>%s</b> %d"%(h,d) for h,d in l) if l else "a few steps"
 SUFFIX={}
 def rtxt(a,b):
@@ -28,8 +30,10 @@ def rtxt(a,b):
             if s['toR']:
                 tail=f"to <b>{E(B)}</b>"+(" <span class='sub'>(its outline is closed on the map: walk up to its walls and look for the door)</span>" if s['sealed'] else "")
             else:
-                sid=s['to'].split()[1]; tail=f"to the <span class='chip'>{sid}</span> stairs <span class='sub'>(/loc {loc(*s['xy'])})</span>"
+                sid=s['to'].split()[1]; tail=f"to the <span class='chip'>{sid}</span> stairs <span class='sub'>({waycmd(s['xy'][0],s['xy'][1],s['lv'])})</span>"
             out.append(f"<li>{head}: {legs(s['legs'])} {tail}</li>")
+        elif s['k']=='portal':
+            out.append(f"<li><span class='chip'>{s['id']}</span> ✦ use the <b>teleport</b> to <b>{R.zl(s['to'])}</b> ({E(s['toname'])})</li>")
         else:
             if s['dir']=='up': up+=1
             else: dn+=1
@@ -70,9 +74,10 @@ for a in order:
 # stair key
 key=[]
 for g in R.STAIRS:
-    f=", ".join(loc(*p) for p in g['feet']); h=", ".join(loc(*p) for p in g['heads'])
+    f=" ".join(waycmd(p[0],p[1],g['lo']) for p in g['feet']); h=" ".join(waycmd(p[0],p[1],g['hi']) for p in g['heads'])
     key.append(f"<tr><td><span class='chip'>{g['id']}</span></td><td>{R.zl(g['lo'])} {E(R.NAMES[g['lo']])}</td><td>{R.zl(g['hi'])} {E(R.NAMES[g['hi']])}</td><td class='sub'>{f}</td><td class='sub'>{h}</td></tr>")
 CSS="""
+.way{font:12.5px ui-monospace,Menlo,Consolas,monospace;background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:0 5px;cursor:copy;white-space:nowrap;color:var(--fg)}.way:hover{border-color:var(--acc)}.way.copied{background:var(--acc);color:#fff}
 :root{--bg:#fbfaf7;--fg:#1d1b16;--mut:#6b665a;--card:#fff;--line:#e4dfd2;--acc:#c2410c}
 @media(prefers-color-scheme:dark){:root{--bg:#161512;--fg:#ece8dc;--mut:#a39d8d;--card:#1f1d19;--line:#34312a;--acc:#fb923c}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
@@ -109,6 +114,8 @@ f.onchange=t.onchange=show;
 document.getElementById('swap').onclick=()=>{const a=f.value;f.value=t.value;t.value=a;show()};
 document.addEventListener('click',e=>{const el=e.target.closest('[data-k]');if(!el)return;const [a,b]=el.dataset.k.split('_');f.value=a;t.value=b;show();document.getElementById('picker').scrollIntoView({behavior:'smooth',block:'start'})});
 f.value=%d;t.value=%d;show();
+document.addEventListener('click',e=>{const w=e.target.closest('.way');if(!w)return;e.stopPropagation();const t=w.textContent.trim();
+ try{navigator.clipboard.writeText(t).then(()=>{const o=w.title;w.title='Copied!';w.classList.add('copied');setTimeout(()=>{w.title=o;w.classList.remove('copied')},1200)},()=>{})}catch(_){}},true);
 """ % (json.dumps({k:(dict(html=v['html']) if v else None) for k,v in data.items()}),order[0],order[-3])
 page=f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{E(Z.ROUTES_TITLE)}</title><style>{CSS}</style></head><body><div class="wrap">
 <h1>{E(Z.ROUTES_TITLE)}</h1>
@@ -122,9 +129,9 @@ page=f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="
 <p class="sub">Open a room, then tap a destination for the full steps.</p>
 {"".join(sheets)}
 <h2>Stair key</h2>
-<table class="key"><tr><th>Stair</th><th>Bottom</th><th>Top</th><th>Bottom end /loc</th><th>Top end /loc</th></tr>{"".join(key)}</table>
+<table class="key"><tr><th>Stair</th><th>Bottom</th><th>Top</th><th>Bottom end</th><th>Top end</th></tr>{"".join(key)}</table>
 <h2>Notes</h2>
-<p class="sub"><b>Directions.</b> N, E, S, W follow the in-game map, with north at the top of the map window. Numbers are approximate distances in /loc units, and each leg is simplified from the walkable corridors, so follow the corridor rather than a rigid straight line. The map-file-to-/loc conversion follows the community-documented format (map x = −second /loc number, map y = −first); I haven’t been able to confirm it in the client, so check one stair with <span class="chip">/loc</span> before trusting the compass.</p>
+<p class="sub"><b>Directions.</b> N, E, S, W follow the in-game map, with north at the top of the map window. Numbers are approximate distances in map units, and each leg is simplified from the walkable corridors, so follow the corridor rather than a rigid straight line. Locations are <code>/way Y, X, Z</code> commands: click one to copy it, paste it into the chat window and EverQuest sets a waypoint. The conversion from the map file follows the community-documented format (map x = −second /loc number, map y = −first); it hasn’t been verified in the client, so stand on one stair and type <code>/loc</code> to check before trusting the compass.</p>
 <p class="sub"><b>Limits.</b> Routes are the shortest walk computed from the wall outlines, assuming every gap in a wall is a doorway. The map has no doors, so a wall gap that’s really a barrier would break a route. {Z.ROUTES_LIMITS_NOTE}</p>
 </div><script>{JS}</script></body></html>"""
 open(os.path.join(OUT_DIR,'cheatsheet.html'),'w').write(page)

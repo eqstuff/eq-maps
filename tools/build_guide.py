@@ -36,26 +36,34 @@ def near_poi(lv,xy,maxd=90):
         d=math.dist((p['x'],p['y']),xy)
         if d<maxd and (best is None or d<best[0]): best=(d,p['t'])
     return best[1] if best else None
-def loc(xy): return "%d, %d"%(round(-xy[1]),round(-xy[0]))
+def waycmd(x,y,z):
+    """A copyable /way command; /way takes the same order as /loc prints: Y, X, Z."""
+    return f'<code class="way" title="Click to copy, then paste in the chat window to set a waypoint">/way {round(-y)}, {round(-x)}, {round(z)}</code>'
 def clean(t): return t+')'*(t.count('(')-t.count(')'))
 def short(t): return clean(t)
 # ---------- connection diagram (interactive) ----------
 rooms_by_lv=collections.defaultdict(list)
 for r_ in R.ROOMS: rooms_by_lv[r_['lv']].append(r_)
-x0=46;boxw=480;laneg=16;gap=14;CHIPR=boxw-100
+x0=46;boxw=580;laneg=16;gap=14;CHIPR=boxw-100;LEFT=116;TW=92
 BOX={};y=0
 chipsof={}
 for lv in ORDER:
-    chips=[];cx=62;line=0
+    chips=[];cx=LEFT;line=0
     for r_ in rooms_by_lv.get(lv,[]):
         w=len(r_['name'])*6.2+16
-        if cx+w>CHIPR and cx>62: line+=1;cx=62
+        if cx+w>CHIPR and cx>LEFT: line+=1;cx=LEFT
         chips.append((r_,cx,line,w));cx+=w+6
     chipsof[lv]=chips
-    h=40 if not chips else 36+(line+1)*26+2
+    has_geo=bool(geo.get(lv))
+    h=(40 if not chips else 36+(line+1)*26+2)
+    if has_geo: h=max(h,80)
     BOX[lv]=dict(y=y,h=h);y+=h+gap
+PORT=[]
+for p_ in R.PORTALS:
+    la_,lb_=R.ROOMS[p_['a']]['lv'],R.ROOMS[p_['b']]['lv']
+    PORT.append(dict(id=p_['id'],lo=min(la_,lb_),hi=max(la_,lb_),portal=True,name=p_['name'],text=p_['text']))
 ri={lv:i for i,lv in enumerate(ORDER)}
-edges=[(ri[g['hi']],ri[g['lo']],g) for g in st]
+edges=[(ri[g['hi']],ri[g['lo']],g) for g in st+PORT]
 lanes=[]
 for e in sorted(edges,key=lambda e:(e[1]-e[0])):
     for ln in lanes:
@@ -78,14 +86,40 @@ svg=[f'<svg viewBox="0 0 {W} {H}" class="diag" role="img" aria-label="Floor conn
 for a_,b_,g in edges:
     k=laneof[g['id']];lx=x0+boxw+22+k*laneg;c=cols[k%len(cols)]
     ya=ANCH["%s@%d"%(g['id'],ORDER[a_])];yb=ANCH["%s@%d"%(g['id'],ORDER[b_])]
-    svg.append(f'<g class="edge" id="e-{g["id"]}"><title>{g["id"]}: {zl(g["lo"])} {E(NAMES[g["lo"]])} to {zl(g["hi"])} {E(NAMES[g["hi"]])}</title><path d="M{x0+boxw} {ya:.1f} H{lx} V{yb:.1f} H{x0+boxw}" fill="none" stroke="{c}" stroke-width="1.6"/>'
-      f'<circle cx="{lx}" cy="{(ya+yb)/2:.1f}" r="9" fill="{c}"/><text x="{lx}" y="{(ya+yb)/2+3.2:.1f}" class="pill" text-anchor="middle">{g["id"][1:]}</text></g>')
+    dash=' stroke-dasharray="6 4"' if g.get('portal') else ''
+    lab='T' if g.get('portal') else g["id"][1:]
+    ttl=(f'{g["id"]}: teleport between {zl(g["lo"])} {E(NAMES[g["lo"]])} and {zl(g["hi"])} {E(NAMES[g["hi"]])}' if g.get('portal') else f'{g["id"]}: {zl(g["lo"])} {E(NAMES[g["lo"]])} to {zl(g["hi"])} {E(NAMES[g["hi"]])}')
+    svg.append(f'<g class="edge" id="e-{g["id"]}"><title>{ttl}</title><path d="M{x0+boxw} {ya:.1f} H{lx} V{yb:.1f} H{x0+boxw}" fill="none" stroke="{c}" stroke-width="1.6"{dash}/>'
+      f'<circle cx="{lx}" cy="{(ya+yb)/2:.1f}" r="9" fill="{c}"/><text x="{lx}" y="{(ya+yb)/2+3.2:.1f}" class="pill" text-anchor="middle">{lab}</text></g>')
+def thumb(lv,yy,h):
+    segs=geo.get(lv,[])+terr.get(lv,[])
+    if not segs: return ''
+    xs=[v for l in segs for v in (l[0],l[3])];ys=[v for l in segs for v in (l[1],l[4])]
+    for r_ in rooms_by_lv.get(lv,[]): xs.append(r_['x']);ys.append(r_['y'])
+    for g in st:
+        if lv in (g['lo'],g['hi']):
+            for p in (g['feet'] if g['lo']==lv else g['heads']): xs.append(p[0]);ys.append(p[1])
+    bx0,bx1,by0,by1=min(xs),max(xs),min(ys),max(ys)
+    w=max(bx1-bx0,1);hh=max(by1-by0,1);th=h-16
+    sc=min((TW-10)/w,(th-10)/hh);ox=x0+8+(TW-w*sc)/2;oy=yy+8+(th-hh*sc)/2
+    T=lambda X,Y:(ox+(X-bx0)*sc,oy+(Y-by0)*sc)
+    d=[]
+    for l in segs:
+        a_=T(l[0],l[1]);b_=T(l[3],l[4]);d.append(f"M{a_[0]:.1f} {a_[1]:.1f}L{b_[0]:.1f} {b_[1]:.1f}")
+    o=[f'<g class="th"><rect class="thb" x="{x0+8}" y="{yy+8}" width="{TW}" height="{th}" rx="5"/><path d="{"".join(d)}"/>']
+    for g in st:
+        if lv in (g['lo'],g['hi']):
+            for p in (g['feet'] if g['lo']==lv else g['heads']):
+                px,py=T(p[0],p[1]);o.append(f'<circle class="ts" data-s="{g["id"]}" cx="{px:.1f}" cy="{py:.1f}" r="3.8"/>')
+    for r_ in rooms_by_lv.get(lv,[]):
+        px,py=T(r_['x'],r_['y']);o.append(f'<circle class="td" data-r="{r_["id"]}" cx="{px:.1f}" cy="{py:.1f}" r="2.7"><title>{E(r_["name"])}</title></circle>')
+    o.append('</g>');return "".join(o)
 for lv in ORDER:
     bx=BOX[lv];yy=bx['y']
     cls='box faint' if lv in Z.MINOR_LEVELS else 'box'
     sub=' no labels, no stairs found' if (not chipsof[lv] and not byl.get(lv)) else ''
     o=[f'<g class="bx" data-lv="{lv}"><rect class="{cls}" x="{x0}" y="{yy}" width="{boxw}" height="{bx["h"]}" rx="8"/>'
-       f'<text class="zt" x="{x0+10}" y="{yy+23}">{zl(lv)}</text><text class="nt" x="{x0+62}" y="{yy+23}">{E(NAMES[lv])}</text>'+(f'<text class="st" x="{x0+62+len(NAMES[lv])*7.6+14}" y="{yy+23}">{sub}</text>' if sub else '')]
+       f'<text class="zt" x="{x0+LEFT}" y="{yy+23}">{zl(lv)}</text><text class="nt" x="{x0+LEFT+52}" y="{yy+23}">{E(NAMES[lv])}</text>'+(f'<text class="st" x="{x0+LEFT+52+len(NAMES[lv])*7.6+14}" y="{yy+23}">{sub}</text>' if sub else '')+thumb(lv,yy,bx["h"])]
     for r_,cx,line,w in chipsof[lv]:
         o.append(f'<g class="rc" data-r="{r_["id"]}"><rect x="{x0+cx:.1f}" y="{yy+34+line*26}" width="{w:.1f}" height="21" rx="10.5"/><text x="{x0+cx+w/2:.1f}" y="{yy+48.5+line*26}" text-anchor="middle">{E(r_["name"])}</text></g>')
     o.append('</g>')
@@ -123,6 +157,14 @@ def route_entry(sk,dk):
     if sv: h.append(f"<li>Start anywhere on <b>{zl(la)} {E(NAMES[la])}</b>.</li>")
     first=not sv
     for u,v in zip(Q[:-1],Q[1:]):
+        if GR.edges[u,v].get('portal'):
+            pid=GR.edges[u,v]['portal'];pp=[p_ for p_ in R.PORTALS if p_['id']==pid][0]
+            fr_,to_=R.nodes[u][0],R.nodes[v][0]
+            stairs.append(dict(id=pid,dir='teleport',fr=fr_,to=to_,exit=pend,ra=pp['a'],rb=pp['b']))
+            floors.append(to_)
+            h.append(f"<li><span class='chip' style='background:#a21caf'>{pid}</span> ✦ Use the <b>teleport</b> to <b>{zl(to_)}</b> ({E(NAMES[to_])}); you arrive at <b>{E(R.ROOMS[v[1]]['name'])}</b></li>")
+            pend='';first=False
+            continue
         if u[0]=='s' and v[0]=='s' and u[1]==v[1] and u[2]!=v[2]:
             up=v[2]>u[2]
             stairs.append(dict(id=u[1],dir='up' if up else 'down',fr=u[2],to=v[2],exit=pend))
@@ -137,7 +179,7 @@ def route_entry(sk,dk):
             first=False
             if v[0]=='r': tail=f"to <b>{E(R.ROOMS[v[1]]['name'])}</b>"+(" <span class='sub'>(closed outline on the map: walk up to its walls and look for the door)</span>" if v in R.SEALED else "")
             else:
-                n_=R.nodes[v]; tail=f"to the <span class='chip'>{v[1]}</span> stairs <span class='sub'>(/loc {loc((n_[1],n_[2]))})</span>"
+                n_=R.nodes[v]; tail=f"to the <span class='chip'>{v[1]}</span> stairs <span class='sub'>({waycmd(n_[1],n_[2],n_[0])})</span>"
             h.append(f"<li>{head}: {legs_txt(legs)} {tail}</li>")
             pend=hd
     h.append(f"<li class='done'>Arrive at <b>{E(B_) if B_ else zl(lb)+' '+E(NAMES[lb])}</b>.</li>")
@@ -207,10 +249,14 @@ for lv in ORDER:
             other=g['lo'];way="down";here=g['head'];there=g['foot'];arrow="↓"
         nr=near_poi(other,there); nh=near_poi(lv,here)
         conn.append(f'<li><span class="chip">{g["id"]}</span> {arrow} <b>{way} to {zl(other)} {E(NAMES[other])}</b>'
-          +headout(lv,g)+f'<div class="sub">enter at /loc {loc(here)}'+(f', near {E(short(nh))}' if nh else '')+f' · arrive /loc {loc(there)}'+(f', near {E(short(nr))}' if nr else '')+'</div></li>')
+          +headout(lv,g)+f'<div class="sub">enter at {waycmd(here[0],here[1],lv)}'+(f', near {E(short(nh))}' if nh else '')+f' · arrive {waycmd(there[0],there[1],other)}'+(f', near {E(short(nr))}' if nr else '')+'</div></li>')
+    for p_ in PORT:
+        if lv in (p_['lo'],p_['hi']):
+            other=p_['hi'] if lv==p_['lo'] else p_['lo']
+            conn.append(f'<li><span class="chip" style="background:#a21caf">{p_["id"]}</span> ✦ <b>teleport to {zl(other)} {E(NAMES[other])}</b><div class="sub">{E(p_["text"])}</div></li>')
     pl_list=[]
     for i,p in enumerate(pois.get(lv,[]),1):
-        pl_list.append(f'<li><span class="num">{i}</span>{E(short(p["t"]))}<span class="loc"> /loc {loc((p["x"],p["y"]))}</span></li>')
+        pl_list.append(f'<li><span class="num">{i}</span>{E(short(p["t"]))}<span class="loc"> {waycmd(p["x"],p["y"],p["z"])}</span></li>')
     note=""
     note=Z.floor_note(lv)
     cards.append(f'<section class="card" id="f{lv}"><header><span class="z">{zl(lv)}</span><h3>{E(NAMES[lv])}</h3></header>'
@@ -224,8 +270,14 @@ for lv in ORDER:
     ups=sorted({g['hi'] for g in byl.get(lv,[]) if g['lo']==lv},reverse=True)
     dns=sorted({g['lo'] for g in byl.get(lv,[]) if g['hi']==lv},reverse=True)
     pl=[short(p['t']) for p in pois.get(lv,[]) if not p['t'].startswith('to #')]
-    rows.append(f'<tr><td><a href="#f{lv}"><b>{zl(lv)}</b></a></td><td>{E(NAMES[lv])}</td><td>{", ".join(zl(u) for u in ups) or "–"}</td><td>{", ".join(zl(d) for d in dns) or "–"}</td></tr>')
+    tps=[zl(p_['hi'] if lv==p_['lo'] else p_['lo'])+' ('+p_['id']+')' for p_ in PORT if lv in (p_['lo'],p_['hi'])]
+    rows.append(f'<tr><td><a href="#f{lv}"><b>{zl(lv)}</b></a></td><td>{E(NAMES[lv])}</td><td>{", ".join(zl(u) for u in ups) or "–"}</td><td>{", ".join(zl(d) for d in dns) or "–"}</td><td>{", ".join(tps) or "–"}</td></tr>')
 CSS="""
+.way{font:12.5px ui-monospace,Menlo,Consolas,monospace;background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:0 5px;cursor:copy;white-space:nowrap;color:var(--fg)}.way:hover{border-color:var(--acc)}.way.copied{background:var(--acc);color:#fff}
+.wrap{max-width:1240px!important}.dgrid{grid-template-columns:minmax(0,880px) minmax(280px,1fr)!important}
+.th path{fill:none;stroke:var(--wall);stroke-width:.9;stroke-linecap:round;opacity:.85}.thb{fill:var(--bg);stroke:var(--line)}
+.td{fill:var(--poi);cursor:pointer;stroke:var(--card);stroke-width:.8}.td.src{fill:#16a34a;r:4.8;stroke:#fff;stroke-width:1.4}.td.dst{fill:#dc2626;r:4.8;stroke:#fff;stroke-width:1.4}.td.pt{fill:#a21caf;r:4.4}
+.ts{fill:var(--stair);opacity:0;stroke:var(--card);stroke-width:1}.ts.on{opacity:1}
 .ctl{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin:10px 0 12px}.ctl label{display:flex;flex-direction:column;font-size:12px;color:var(--mut);gap:3px;flex:1;min-width:230px}
 .ctl select,.ctl button{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg)}.ctl button{cursor:pointer}.ctl button:hover{border-color:var(--acc)}
 .dgrid{display:grid;grid-template-columns:minmax(0,740px) minmax(260px,1fr);gap:16px;align-items:start}@media(max-width:1000px){.dgrid{grid-template-columns:1fr}}
@@ -263,6 +315,23 @@ ol.poi li{margin:2px 0;font-size:13.5px}.num{display:inline-block;width:18px;hei
 """
 JS='\nconst FL=%FL%,RM=%RM%,ANCH=%ANCH%,BOX=%BOX%,X1=%X1%;\nconst GL={N:\'↑\',NE:\'↗\',E:\'→\',SE:\'↘\',S:\'↓\',SW:\'↙\',W:\'←\',NW:\'↖\'};\nlet A=null,B=null,ROUTES=null,loadErr=false;\nconst $=q=>document.querySelector(q),svg=$(\'svg.diag\'),panel=$(\'#panel\'),selA=$(\'#selA\'),selB=$(\'#selB\');\nconst NS=\'http://www.w3.org/2000/svg\';\nconst zl=z=>z>0?\'+\'+z:String(z);\nconst flName={};FL.forEach(f=>flName[f[0]]=f[1]);\nconst rmById={};RM.forEach(r=>rmById[r[0]]=r);\nfunction lvOf(c){return c[0]===\'F\'?+c.slice(1):rmById[+c.slice(1)][2]}\nfunction label(c){return c[0]===\'F\'?zl(+c.slice(1))+\' \'+flName[+c.slice(1)]+\' (floor)\':rmById[+c.slice(1)][1]}\nfunction fill(sel){sel.innerHTML=\'<option value="">–</option>\';\n FL.forEach(f=>{const g=document.createElement(\'optgroup\');g.label=zl(f[0])+\' \'+f[1];\n  const o=document.createElement(\'option\');o.value=\'F\'+f[0];o.textContent=\'Anywhere on this floor\';g.appendChild(o);\n  RM.filter(r=>r[2]===f[0]).forEach(r=>{const o=document.createElement(\'option\');o.value=\'R\'+r[0];o.textContent=r[1];g.appendChild(o)});\n  sel.appendChild(g)})}\nfill(selA);fill(selB);\nfunction pick(c){ if(A===null||(A!==null&&B!==null)){A=c;B=null}else if(c!==A){B=c} render() }\nsvg.addEventListener(\'click\',e=>{const rc=e.target.closest(\'.rc\'),bx=e.target.closest(\'.bx\');\n if(rc){pick(\'R\'+rc.dataset.r);return} if(bx){pick(\'F\'+bx.dataset.lv)}});\nselA.onchange=()=>{A=selA.value||null;if(A&&A===B)B=null;render()};\nselB.onchange=()=>{B=selB.value||null;if(B&&B===A)A=null;render()};\n$(\'#swap\').onclick=()=>{[A,B]=[B,A];render()};\n$(\'#clr\').onclick=()=>{A=B=null;render()};\nfunction tag(lv,txt,cls,off){const g=document.createElementNS(NS,\'g\');g.setAttribute(\'class\',\'tag \'+cls);\n const b=BOX[lv],y=b.y+b.h/2-8+off;g.innerHTML=`<rect x="2" y="${y}" width="40" height="16"/><text x="22" y="${y+11.5}">${txt}</text>`;svg.appendChild(g)}\nfunction render(){\n selA.value=A||\'\';selB.value=B||\'\';\n svg.querySelectorAll(\'.tag,.xp\').forEach(e=>e.remove());\n svg.querySelectorAll(\'.on,.src,.dst,.pick\').forEach(e=>e.classList.remove(\'on\',\'src\',\'dst\',\'pick\'));\n svg.classList.remove(\'active\');\n const boxes={};svg.querySelectorAll(\'.bx\').forEach(b=>boxes[b.dataset.lv]=b);\n const rcs={};svg.querySelectorAll(\'.rc\').forEach(r=>rcs[\'R\'+r.dataset.r]=r);\n if(A&&rcs[A])rcs[A].classList.add(\'src\'); if(B&&rcs[B])rcs[B].classList.add(\'dst\');\n if(A){const bx=boxes[lvOf(A)];bx.classList.add(B?\'src\':\'pick\');tag(lvOf(A),\'FROM\',\'a\',(B&&lvOf(B)===lvOf(A))?-10:0)}\n if(B){boxes[lvOf(B)].classList.add(\'dst\');tag(lvOf(B),\'TO\',\'b\',(A&&lvOf(A)===lvOf(B))?10:0)}\n if(!A){panel.innerHTML=\'<p class="sub">Pick a start (click a floor or room in the diagram, or use the menus).</p>\';return}\n if(!B){panel.innerHTML=`<p><b>From:</b> ${label(A)}</p><p class="sub">Now pick a destination.</p>`;return}\n if(!ROUTES){panel.innerHTML=loadErr?\'<p class="sub">Route data didn’t load, so I can’t show the route.</p>\':\'<p class="sub">Loading routes…</p>\';return}\n const d=ROUTES[A+\'|\'+B];\n const head=`<p style="margin:0 0 4px"><b style="color:#16a34a">${label(A)}</b> → <b style="color:#dc2626">${label(B)}</b></p>`;\n if(!d){panel.innerHTML=head+\'<p class="sub">No walking route between these on the map. The Teleport and pit are cut off from the tower, and the +468 platform has no stairs.</p>\';return}\n svg.classList.add(\'active\');\n const fl=new Set(d.f);fl.forEach(l=>boxes[l]&&boxes[l].classList.add(\'on\'));\n d.s.forEach(s=>{const e=$(\'#e-\'+s.id);if(e)e.classList.add(\'on\');\n  if(s.exit){const y=ANCH[s.id+\'@\'+s.fr];if(y===undefined)return;const g=document.createElementNS(NS,\'g\');g.setAttribute(\'class\',\'xp\');\n   g.innerHTML=`<rect x="${X1-94}" y="${y-9}" width="86" height="18"/><text x="${X1-51}" y="${y+4}">leave ${GL[s.exit]||\'\'} ${s.exit}</text>`;svg.appendChild(g)}});\n panel.innerHTML=head+d.h;\n}\nfetch(\'routes.json\').then(r=>r.json()).then(j=>{ROUTES=j;render()}).catch(()=>{loadErr=true;render()});\nrender();\n'
 JS=(JS.replace('%FL%',json.dumps([[lv,NAMES[lv]] for lv in ORDER if lv not in Z.SKY_LEVELS])).replace('%RM%',json.dumps([[r_['id'],r_['name'],r_['lv']] for r_ in R.ROOMS])).replace('%ANCH%',json.dumps(ANCH)).replace('%BOX%',json.dumps({str(k):v for k,v in BOX.items()})).replace('%X1%',str(x0+boxw)))
+JS2="""
+const _render=render;
+render=function(){_render();
+ svg.querySelectorAll('.pt').forEach(e=>e.classList.remove('pt'));
+ const td=c=>c&&c[0]==='R'?svg.querySelector('.td[data-r="'+c.slice(1)+'"]'):null;
+ const a=td(A),b=td(B);if(a)a.classList.add('src');if(b)b.classList.add('dst');
+ const d=(A&&B&&ROUTES)?ROUTES[A+'|'+B]:null;
+ if(d)d.s.forEach(s=>{svg.querySelectorAll('.ts[data-s="'+s.id+'"]').forEach(e=>e.classList.add('on'));
+  if(s.ra!==undefined)[s.ra,s.rb].forEach(r=>{const t=svg.querySelector('.td[data-r="'+r+'"]');if(t)t.classList.add('pt')})});
+};
+svg.addEventListener('click',e=>{const t=e.target.closest('.td');if(t){e.stopPropagation();pick('R'+t.dataset.r)}},true);
+
+document.addEventListener('click',e=>{const w=e.target.closest('.way');if(!w)return;e.stopPropagation();const t=w.textContent.trim();
+ try{navigator.clipboard.writeText(t).then(()=>{const o=w.title;w.title='Copied!';w.classList.add('copied');setTimeout(()=>{w.title=o;w.classList.remove('copied')},1200)},()=>{})}catch(_){}},true);
+
+render();
+"""
 page=f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{E(Z.TITLE)}</title><style>{CSS}</style></head><body><div class="wrap">
 <h1>{E(Z.TITLE)}</h1>
 <p class="lead">{Z.intro(len(st))}</p>
@@ -272,15 +341,15 @@ page=f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="
 <div class="dgrid"><div class="diagwrap">{diagram}</div><aside class="panel" id="panel"><p class="sub">Pick a start and a destination to see the route here.</p></aside></div>
 <p class="sub">Heights are map Z values, top is highest. Each numbered circle is a staircase or ramp (S1–S{len(st)}); its line runs between the two floors it joins. Dashed boxes are minor landings. Black “leave” badges on the highlighted route show which way to head out of that floor toward the next stairs.</p>
 <h2>Floors at a glance</h2>
-<table><tr><th>Height</th><th>Floor</th><th>Stairs up to</th><th>Stairs down to</th></tr>{"".join(rows)}</table>
+<table><tr><th>Height</th><th>Floor</th><th>Stairs up to</th><th>Stairs down to</th><th>Teleport to</th></tr>{"".join(rows)}</table>
 <h2>Floor by floor</h2>
 <div class="legend"><span><i style="border-color:var(--wall)"></i>walls</span><span><i style="border-color:var(--stair)"></i>stairs / ramps (S#)</span><span><i style="border-color:var(--ter)"></i>cave slopes</span><span><b style="color:var(--poi)">●</b> numbered labels</span></div>
 {"".join(cards)}
 <h2>Notes on reading this</h2>
-<p class="sub"><b>Coordinates.</b> Plans are drawn in raw map-file orientation. To use a position in game, a map point (x, y) corresponds to in-game <code>/loc</code> Y, X = (−y, −x), and every “/loc” above is already converted. This hasn’t been verified in the client, so spot-check one stair with <code>/loc</code> before trusting the orientation.</p>
+<p class="sub"><b>Coordinates.</b> Plans are drawn in raw map-file orientation. Locations are given as <code>/way Y, X, Z</code> commands: click one to copy it, paste it into the chat window and EverQuest sets a waypoint you can follow. A map point (x, y) is converted to the in-game Y, X order as (−y, −x), the same order <code>/loc</code> prints. This hasn’t been verified in the client, so spot-check one stair by standing on it and typing <code>/loc</code> before trusting the orientation.</p>
 <p class="sub"><b>How I decoded it.</b> Each <code>L</code> line is a wall segment <code>x1,y1,z1,x2,y2,z2,r,g,b</code>; each <code>P</code> line is a label <code>x,y,z,r,g,b,size,text</code>. Floors are groups of flat segments at the same Z. A stair is a bundle of sloped segments joining two floors. <code>_1</code> holds the in-zone labels. <code>_2</code> holds the key (ground-spawn and Hunter placeholder legend), drawn far outside the zone at x up to 2030, so I excluded it from the plans.</p>
 <p class="sub"><b>What the file can’t tell you.</b> It has no doors, zone lines, teleport destinations or elevator logic. {Z.LIMITS_NOTE}</p>
 <p class="sub">{Z.SOURCE_NOTE}</p>
-</div><script>{JS}</script></body></html>"""
+</div><script>{JS}</script><script>{JS2}</script></body></html>"""
 open(os.path.join(OUT_DIR,'index.html'),'w').write(page)
 print(len(page),len(st),len(lanes))

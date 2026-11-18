@@ -55,6 +55,8 @@ Nodes are every room and every stair end. For each node, `skimage.graph.MCP_Geom
 
 The **route graph** (networkx) joins nodes on the same floor with the grid distance (+1) and the two ends of a stair with its length (Manhattan foot→head plus the height change). A route is a shortest path in that graph; consecutive same-floor nodes are walks (with legs), stair edges are "up/down". The first leg's heading is the "leave the room heading X" answer.
 
+**Teleports.** The map file has no portals, so links the player knows about are declared in the zone config (`PORTALS`: from room, to room, cost) and added to the route graph as extra edges between two room nodes. They appear as a dashed lane with a "T" badge in the diagram, as a "✦ Use the teleport" step in routes, and as a connection in the floor cards. Portals are two-way; a one-way portal isn't supported yet (it would need a directed graph). Arx Mentis has one, T1: the pad at the top of the pit pyramid to the ground-floor central hub, which comes from in-game experience, not from the map.
+
 For the interactive guide, endpoints can be a whole *floor* instead of a room: a temporary virtual node connected to every node on that floor is added for the query, so "anywhere on +172" works. Virtual endpoints have no walk legs, which is why a floor-only start gets no first exit heading.
 
 ### Stage 3: pages
@@ -66,6 +68,8 @@ For the interactive guide, endpoints can be a whole *floor* instead of a room: a
 * One box per floor, stacked by height, listing its rooms as clickable chips.
 * Each stair is an "edge" drawn in a right-hand gutter: out of the upper floor's box, along a vertical **lane**, back into the lower floor's box. Lanes are assigned greedily (interval colouring) so edges that overlap vertically get different lanes; the stair number sits on the lane. Entry points on a box are spread evenly down its right side.
 * `routes.json` (about 860 KB) holds a precomputed route for every ordered pair of endpoints (floors and rooms): `{"F-1|R3": {"h": "<ol>…", "s": [{"id","dir","fr","to","exit"}], "f": [floors visited]}}`. It's a separate file (fetched with a relative URL) to keep the HTML small and editable.
+* Each floor box carries a **thumbnail**: the floor's wall outline (north up) with a dot per room and a hidden dot per stair end on that floor. Selecting a room turns its dot green (start) or red (destination); stairs on the current route light up orange on both floors they join, and teleport pads turn purple. Clicking a dot selects that room. This makes "where am I on this floor?" a glance.
+* Locations are printed as click-to-copy `/way Y, X, Z` chips (`waycmd()`), so players paste them into chat to set a waypoint.
 * The inline script keeps `{A, B}` state: click picks A, then B, a third click restarts (`pick()`); selects mirror it; Swap and Clear buttons. `render()` adds CSS classes: `.diag.active` greys every `.edge`/`.bx` and `.on` restores the path's; `.src`/`.dst` outline the endpoints; "leave ↗ NE" pills are SVG groups positioned using the box anchor coordinates exported from Python (`ANCH`, `BOX`).
 
 **Cheat sheet** (`build_routes_page.py`): a self-contained page (about 400 KB) with a route finder, a rooms × rooms matrix (cell = exit heading + stairs up/down, colour = distance) and collapsible per-room lists.
